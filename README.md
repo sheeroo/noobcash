@@ -1,0 +1,2 @@
+# noobcash
+Yet another cryptocurrency 

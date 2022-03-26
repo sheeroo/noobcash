@@ -1,7 +1,6 @@
 import binascii
 
-import Crypto
-import Crypto.Random
+from Crypto import Random
 from Crypto.Hash import SHA
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
@@ -12,17 +11,16 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-
-
 class wallet:
 
-	def __init__():
+	def __init__(self):
 		##set
 
-		#self.public_key
-		#self.private_key
+		key = RSA.generate(2048)
+		self.public_key = key.publickey().export_key(format = 'PEM')
+		self.private_key = key.export_key(format = 'PEM')
 		#self_address
 		#self.transactions
-
+	
 	def balance():
-
+		return 0

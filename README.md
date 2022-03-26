@@ -1,2 +1,2 @@
 # noobcash
-Yet another cryptocurrency 
+Yet another shitcoin

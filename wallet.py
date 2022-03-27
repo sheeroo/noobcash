@@ -11,7 +11,7 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
-class wallet:
+class Wallet:
 
 	def __init__(self):
 		##set
@@ -21,6 +21,3 @@ class wallet:
 		self.private_key = key.export_key(format = 'PEM')
 		#self_address
 		#self.transactions
-	
-	def balance():
-		return 0

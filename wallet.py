@@ -13,11 +13,11 @@ from uuid import uuid4
 
 class Wallet:
 
-	def __init__(self):
+	def __init__(self, public_key, private_key):
 		##set
 
 		key = RSA.generate(2048)
-		self.public_key = key.publickey().export_key(format = 'PEM')
-		self.private_key = key.export_key(format = 'PEM')
+		self.public_key = public_key or key.publickey().export_key(format = 'PEM')
+		self.private_key = private_key or key.export_key(format = 'PEM')
 		#self_address
 		#self.transactions

@@ -47,3 +47,11 @@ class Blockchain:
             if i.index != 0 and not i.validate_block(prev):
                 return False
             prev = i
+
+    @property
+    def last_block(self):
+        '''Get last block of chain
+        Returns:
+            Block: last block of chain
+        '''
+        return self.chain[-1]

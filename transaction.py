@@ -4,40 +4,40 @@ import binascii
 
 import Crypto
 import Crypto.Random
-from Crypto.Hash import SHA
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
 import requests
+import uuid
 from flask import Flask, jsonify, request, render_template
 
 
 class Transaction:
 
-    def __init__(self, sender_address, sender_private_key, recipient_address, value):
+    def __init__(self, sender_address, sender_private_key, recipient_address, value, transaction_inputs):
 
-
-        ##set
-
-
-
-        #self.sender_address: To public key του wallet από το οποίο προέρχονται τα χρήματα
-        #self.receiver_address: To public key του wallet στο οποίο θα καταλήξουν τα χρήματα
-        #self.amount: το ποσό που θα μεταφερθεί
-        #self.transaction_id: το hash του transaction
-        #self.transaction_inputs: λίστα από Transaction Input 
-        #self.transaction_outputs: λίστα από Transaction Output 
-        #selfSignature
-
-
-    
-
-
-    def to_dict(self):
+        self.sender_address = sender_address
+        self.receiver_address = recipient_address
+        self.amount = value
+        self.trans_uuid = uuid.uuid1().bytes
+        self.transaction_id = SHA256.new(self.trans_uuid).hexdigest()
+        self.transaction_inputs = transaction_inputs
+        self.transaction_outputs = []
+        self.signature = self.sign_transaction(sender_private_key)
         
-
-    def sign_transaction(self):
+    def sign_transaction(self, sender_private_key):
         """
         Sign transaction with private key
         """
+
+        util = SHA256.new(self.trans_uuid)
+        key = RSA.importKey(sender_private_key)
+        signer = PKCS1_v1_5.new(key)
+        signature = signer.new(util)
+
+        return signature
+        
+
+
        

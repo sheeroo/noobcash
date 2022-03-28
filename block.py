@@ -19,3 +19,12 @@ class Block:
 
     # def add_transaction(Transaction transaction, Blockchain blockchain):
         #add a transaction to the block
+
+    def validate_block(self, previous_block):
+        # Check if current_hash is correct
+        if self.current_hash != self.myHash():
+            return False
+        # Check if previous_hash is equal to previous block's hash
+        elif self.previous_hash != previous_block.current_hash:
+            return False
+        return True

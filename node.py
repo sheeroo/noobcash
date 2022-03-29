@@ -6,8 +6,6 @@ from blockchain import Blockchain
 from transaction import Transaction
 from wallet import Wallet
 
-import threading
-
 class Node:
 	def __init__(self, ip, port, wallet):
 		self.blockchain = Blockchain()
@@ -22,7 +20,7 @@ class Node:
 		#self.NBCs
 		#self.wallet
 
-	def isBootstrap(self):
+	def is_bootstrap(self):
 		return self.id == 0
 
 	def subscribe(self, bootstrap_ip, bootstrap_port):
@@ -48,19 +46,6 @@ class Node:
 			print(f'Oops, {error}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {error}')
 		
-	# def create_genesis_block(self):
-	# 	if self.id == 0:
-	# 		#do stuff
-	# 		return 0
-	# 	else:
-	# 		raise Exception('Node is not bootstrap node')
-
-	# def create_new_block(self):
-	# 	# self.chain.lock.acquire()
-	# 	# #add new block
-	# 	# self.chain.lock.release()
-		
-	# 	return new_block
 	''' Wallet is being created in init '''
 	# def create_wallet(self):
 	# 	#create a wallet for this node, with a public key and a private key
@@ -105,18 +90,18 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
-		nonce = 0
-		new_block = None
+		nonce = 0 #nomizw oti ayto einai lathos
+		new_block = None 
 		while True: 
 			if self.cancel_mining:
 				break
 			new_block = Block(
 				index=previous_block.index + 1,
-				previousHash=previous_block.current_hash,
+				previous_hash=previous_block.current_hash,
 				nonce=nonce,
-				listOfTransactions=[transaction]
+				curr_transactions=[transaction]
 			)
-			if valid_proof(new_block.current_hash):
+			if self.valid_proof(new_block.current_hash):
 				self.brodcast_block(new_block)
 				break
 
@@ -130,7 +115,7 @@ class Node:
 			Boolean: True if proof of work is valid
 		'''
 		difficulty = int(os.getenv('DIFFICULTY'))
-		return block_hash[:difficulty] == "0" * difficulty
+		return block_hash[:difficulty] == '0' * difficulty
 
 	#concencus functions
 
@@ -153,7 +138,7 @@ class Node:
 			wallet=wallet
 		)
 
-	def broadcast(self, url_action, data):
+	def broadcast_block(self, url_action, data):
 		'''Generic broadcast function using POST http method
 		Args:
 			url_action (String): Url to hit on other nodes,

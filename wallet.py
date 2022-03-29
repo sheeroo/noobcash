@@ -21,3 +21,8 @@ class Wallet:
 		self.private_key = private_key or key.export_key(format = 'PEM')
 		#self_address
 		#self.transactions
+	
+	def balance(self):
+		'''Returns:
+            Int: the balance of the wallet
+        '''

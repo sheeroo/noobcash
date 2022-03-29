@@ -20,7 +20,7 @@ class Transaction:
         self.sender_address = sender_address
         self.receiver_address = recipient_address
         self.amount = value
-        self.trans_uuid = uuid.uuid1().bytes
+        self.trans_uuid = uuid.uuid4().bytes
         self.transaction_id = SHA256.new(self.trans_uuid).hexdigest()
         self.transaction_inputs = transaction_inputs
         self.transaction_outputs = []
@@ -38,6 +38,16 @@ class Transaction:
 
         return signature
         
-
+    def to_dict(self):
+        return dict(
+            sender_address = self.sender_address,
+            receiver_address = self.receiver_address,
+            amount = self.amount,
+            trans_uuid = self.trans_uuid,
+            transaction_id = self.transaction_id,
+            transaction_inputs = self.transaction_inputs,
+            transaction_outputs = self.transaction_outputs,
+            signature = self.signature
+        )
 
        

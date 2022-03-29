@@ -1,12 +1,11 @@
 from block import Block
 from time import time
-##########################
-####### needs work #######
-##########################
+
 class Blockchain:
 
     def __init__(self):
         self.chain = []
+        self.curr_transactions = []
         self.nodes = set()
         self.genesis_block()
     
@@ -31,10 +30,17 @@ class Blockchain:
         block = Block(
             index=len(self.chain),
             nonce=nonce,
-            previousHash=previous_hash,
+            curr_transactions=self.curr_transactions,
+            previous_hash=previous_hash,
             timestamp=time.time()
         )
+
+        #reset current transactions
+        self.curr_transactions = []
+        
+        #add block to blockchain
         self.chain.append(block)
+
         return block
     
     def validate_chain(self):
@@ -43,10 +49,10 @@ class Blockchain:
         Returns:
             Boolean: False if any one block is not validated
         '''
-        for i in self.chain:
-            if i.index != 0 and not i.validate_block(prev):
+        for block in self.chain:
+            if block.index != 0 and not block.validate_block(prev):
                 return False
-            prev = i
+            prev = block
 
     @property
     def last_block(self):

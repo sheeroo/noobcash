@@ -21,7 +21,8 @@ class Block:
         Returns:
             The unique hash
         '''
-        block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, self.transactions, self.timestamp)
+        transaction_table = [t.transaction_id for t in self.transactions]
+        block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, transaction_table, self.timestamp)
         return hashlib.sha256(block_of_string.encode()).hexdigest()
 
     def add_transaction(self, transaction: Transaction, blockchain):

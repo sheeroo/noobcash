@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import binascii
+from shutil import ExecError
 
 import Crypto
 import Crypto.Random
@@ -37,7 +38,17 @@ class Transaction:
         signature = signer.new(util)
 
         return signature
-        
+    
+    def verify_signature(self, sender, signature, transaction_id):
+        '''Verification of a received transaction
+		'''
+        key = RSA.importKey(sender)
+        util = SHA256.new(transaction_id)
+        if PKCS1_v1_5.new(key).verify(util,key):
+            raise Exception('Error in transaction verification')
+        return 0
+
+
     def to_dict(self):
         return dict(
             sender_address = self.sender_address,

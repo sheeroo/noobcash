@@ -1,13 +1,16 @@
+from itertools import chain
+from backend.classes.transaction import Transaction
+from backend.exceptions.block import InvalidBlockException
+from backend.exceptions.blockchain import InvalidBlockchainException
 from block import Block
 from time import time
+from utils.debug import log
 
 class Blockchain:
 
-    def __init__(self):
-        self.chain = []
-        self.curr_transactions = []
-        self.nodes = set()
-        self.genesis_block()
+    def __init__(self, chain, transactions_log):
+        self.chain = chain or []
+        self.transactions_log = [] # log transactions while mining ?
     
     def genesis_block(self):
         '''Constructs the genesis block
@@ -47,12 +50,18 @@ class Blockchain:
         '''Validates the chain calling validate block for each block
 
         Returns:
-            Boolean: False if any one block is not validated
+            Boolean: True if every block is validated
+        Raises: 
+            InvalidBlockchainException: if any block is not valid to cause * Consensus *
         '''
-        for block in self.chain:
-            if block.index != 0 and not block.validate_block(prev):
-                return False
-            prev = block
+        try:
+            for block in self.chain:
+                if block.index != 0:
+                    block.validate_block(prev) # Will throw exception if not valid
+                prev = block # Get previous block
+            return True
+        except InvalidBlockException as e:
+            raise InvalidBlockchainException(blockchain=self, block=e.block)
 
     @property
     def last_block(self):
@@ -61,3 +70,22 @@ class Blockchain:
             Block: last block of chain
         '''
         return self.chain[-1]
+
+# class utilities
+    def to_dict(self):
+        result_chain = list(map(Block.to_dict, self.chain))
+        result_transactions_log = list(map(Transaction.to_dict, self.transactions_log))
+        return dict(
+            chain=result_chain,
+            transactions_log=result_transactions_log
+        )
+    
+    @classmethod
+    def from_dict(dictionary: dict):
+        result_chain = list(map(Block.from_dict, dictionary['chain']))
+        log.info(dictionary, header='Blockchain received dict: ')
+        return Blockchain(
+			chain=result_chain
+		)
+
+

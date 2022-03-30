@@ -1,7 +1,9 @@
 import hashlib
 import os
-from threading import Thread
 import requests
+from backend.classes.utxo import Utxo
+from backend.exceptions.transaction import InsufficientFundsException, InvalidTransactionException
+from backend.utils.debug import log
 from block import Block
 from blockchain import Blockchain
 from transaction import Transaction
@@ -10,9 +12,9 @@ from wallet import Wallet
 class Node:
 	def __init__(self, ip, port, wallet):
 		self.blockchain = Blockchain()
-		self.wallet = wallet or Wallet()
+		self.wallet = wallet or self.create_wallet()
 		self.ring = []
-		self.utxo = []
+		self.utxo: list(Utxo) = []
 		self.port = port
 		self.ip = ip
 		self.cancel_mining = False
@@ -32,25 +34,28 @@ class Node:
 		'''
 		try:
 			response = requests.post(f'{bootstrap_ip}:{bootstrap_port}/subscribe', 
-				data={
-					'ip': self.ip,
-					'port': self.port,
-					'public_key': self.wallet.public_key
-				}
+				data=self.to_dict()
 			)
 			response_data = response.json()
 			self.id = response_data['id']
 		except requests.HTTPError as errorh:
-			print(f'Oops, {errorh}')
+			log.error(f'Oops, {errorh}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {errorh}')
 		except requests.ConnectionError as error:
-			print(f'Oops, {error}')
+			log.error(f'Oops, {error}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {error}')
 		
+	def register_node_to_ring(self, node):
+		next_id = self.ring[-1].id + 1
+		node.id = next_id
+		self.ring.add(node)
+
+		return next_id
+
 	''' Wallet is being created in init '''
-	# def create_wallet(self):
-	# 	#create a wallet for this node, with a public key and a private key
-	# 	self.wallet = Wallet()
+	def create_wallet(self):
+		#create a wallet for this node, with a public key and a private key
+		return Wallet()
 
 	# def balance(self,recipient, utxos):
 
@@ -60,16 +65,42 @@ class Node:
 		
 	# 	return amount
 
-	# def create_transaction(sender, receiver, signature):
-	# 	#remember to broadcast it
-
-
 	# def broadcast_transaction(self):
 
-	# def validate_transaction(self):
-	# 	#use of signature and NBCs balance
-
 	# def broadcast_block(self):
+
+	def validate_transaction(self, transaction: Transaction):
+		#use of signature and NBCs balance
+		try:
+			transaction.verify_signature()
+		except InvalidTransactionException as e:
+			raise InvalidTransactionException(transaction=transaction, message="Transaction verification failed!")
+		
+		try:
+			utxos_used = []
+			for trans_in in transaction.transaction_inputs:
+				before = len(utxos_used) #length of utxos_used before iterating utxos of node
+				for utxo in self.utxo:
+					if utxo.id == trans_in.id and utxo.recipient == transaction.sender_address:
+						# utxo is used for this transaction
+						utxos_used.append(utxo.id)
+				after = len(utxos_used) #length of utxos_used after iterating utxos of node
+				# If you don't find a transaction input in node's utxo's invalidate the transaction 
+				# Double spending prevention
+				if after == before:
+					raise InvalidTransactionException(transaction=transaction, message="Transaction input utxos not found!")
+			# Reaching here means funds are found in utxos so now we have to produce transaction's outputs
+			transaction_outputs = transaction.calculate_outputs()
+
+			# Remove utxos used
+			self.utxos = [utxo for utxo in self.utxo if utxo.id not in utxos_used]
+
+			# Add transaction outputs
+			self.utxos.extend(transaction_outputs)
+
+			return True
+		except InvalidTransactionException as e:
+			raise e
 
 	def create_transaction(self, receiver, amount):
 
@@ -93,8 +124,9 @@ class Node:
 			transaction = Transaction(self.wallet.public_key, self.wallet.private_key, receiver, amount, transaction_inp)
 			
 		if amount > total:
-			raise Exception('Insufficient funds dumdum!')
+			raise InsufficientFundsException('Insufficient funds dumdum!')
 		
+		# Broadcast transaction
 		return transaction
 
 	def add_transaction_to_block(self, transaction):
@@ -110,6 +142,7 @@ class Node:
 			self.mine_block(last_block, transaction)
 
 
+	# MINING
 	def mine_block(self, previous_block, transaction):
 		'''Mine a block with PoW and then broadcast it
 		Args:
@@ -133,7 +166,6 @@ class Node:
 				break
 			nonce += 1
 
-
 	@staticmethod
 	def valid_proof(block_hash):
 		'''Check if it is valid proof (hash's first |DIFFICULTY| characters are zero
@@ -145,7 +177,7 @@ class Node:
 		difficulty = int(os.getenv('DIFFICULTY'))
 		return block_hash[:difficulty] == '0' * difficulty
 
-	#concencus functions
+	#concensus functions
 
 	# def valid_chain(self, chain):
 	# 	#check for the longer chain across all nodes
@@ -156,9 +188,15 @@ class Node:
 	# def register_node_to_ring(self):
 	# 	#add this node to the ring, only the bootstrap node can add a node to the ring after checking his wallet and ip:port address
 	# 	#boοtstrap node informs all other nodes and gives the request node an id and 100 NBCs
+	def to_dict(self):
+		return dict(
+			ip=self.ip,
+			port=self.port,
+			public_key=self.wallet.public_key
+		)
 	
 	@classmethod
-	def fromDictionary(nodeDict):
+	def from_dict(nodeDict: dict):
 		wallet = Wallet(public_key=nodeDict['public_key'], private_key='')
 		return Node(
 			ip=nodeDict['ip'],
@@ -166,24 +204,3 @@ class Node:
 			wallet=wallet
 		)
 
-	def broadcast(self, url_action, data, responses):
-		'''Generic broadcast function using POST http method
-		Args:
-			url_action (String): Url to hit on other nodes,
-			data (Dict): Dictionary to hit body
-		Returns:
-			array of responses
-		'''
-		threads=[]
-		responses=[]
-		def call_func(node, url_action, data, responses):
-			response = requests.post(f'{node.ip}:{node.port}/{url_action}', data=data)
-			responses.append(response)
-		for node in self.ring:
-			thread=Thread(target=call_func, args=(node, url_action, data, responses))
-			threads.append(thread)
-			thread.start()
-
-		for thread in threads:
-			thread.join()
-		return responses

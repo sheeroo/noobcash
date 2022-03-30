@@ -4,11 +4,11 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
 
-from block import Block
-from node import Node
-from blockchain import Blockchain
-from wallet import Wallet
-from transaction import Transaction
+from src.backend.classes.block import Block
+from src.backend.classes.node import Node
+from src.backend.classes.blockchain import Blockchain
+from src.backend.classes.wallet import Wallet
+from src.backend.classes.transaction import Transaction
 
 app = Flask(__name__)
 CORS(app)
@@ -32,12 +32,11 @@ def connect():
         return jsonify(response), 400
     else:
         data = request.json
-        next_id = node.ring[-1].id + 1
     # Get node data from request body heh
-        new_node = Node.fromDictionary(data)
-        new_node.id = next_id
-        node.ring.add(new_node)
-        response = { 'id': next_id }
+        new_node = Node.from_dict(data)
+        id = node.register_node(new_node)
+
+        response = { 'id': id }
         '''
             Need to implement the transaction to give initial 100 NBC to this node!!
         '''

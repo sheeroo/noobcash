@@ -11,21 +11,32 @@ from Crypto.Signature import PKCS1_v1_5
 
 import requests
 import uuid
-from flask import Flask, jsonify, request, render_template
+from backend.classes.utxo import Utxo
 
+from backend.exceptions.transaction import InvalidTransactionException
+from backend.utils.debug import log
 
 class Transaction:
-
-    def __init__(self, sender_address, sender_private_key, recipient_address, value, transaction_inputs):
-
+    def __init__(
+            self, 
+            sender_address, 
+            sender_private_key, 
+            receiver_address, 
+            amount, 
+            transaction_inputs,
+            transaction_outputs, 
+            signature, 
+            transaction_id,
+            trans_uuid
+    ):
         self.sender_address = sender_address
-        self.receiver_address = recipient_address
-        self.amount = value
-        self.trans_uuid = uuid.uuid4().bytes
-        self.transaction_id = SHA256.new(self.trans_uuid).hexdigest()
-        self.transaction_inputs = transaction_inputs
-        self.transaction_outputs = []
-        self.signature = self.sign_transaction(sender_private_key)
+        self.receiver_address = receiver_address
+        self.amount = amount
+        self.trans_uuid = trans_uuid or transaction_id or uuid.uuid4().bytes
+        self.transaction_id = transaction_id or SHA256.new(self.trans_uuid).hexdigest() #hexnumber
+        self.transaction_inputs: list(Utxo) = transaction_inputs
+        self.transaction_outputs = transaction_outputs or []
+        self.signature = signature and sender_private_key or self.sign_transaction(sender_private_key)
         
     def sign_transaction(self, sender_private_key):
         """
@@ -35,30 +46,73 @@ class Transaction:
         util = SHA256.new(self.trans_uuid)
         key = RSA.importKey(sender_private_key)
         signer = PKCS1_v1_5.new(key)
-        signature = signer.new(util)
+        signature = signer.sign(util)
 
         return signature
     
-    def verify_signature(self, sender, signature, transaction_id):
+    def verify_signature(self):
         '''Verification of a received transaction
 		'''
-        key = RSA.importKey(sender)
-        util = SHA256.new(transaction_id)
-        if PKCS1_v1_5.new(key).verify(util,key):
-            raise Exception('Error in transaction verification')
-        return 0
+        key = RSA.importKey(self.sender_address)
+        util = SHA256.new(self.transaction_id)
+        if PKCS1_v1_5.new(key).verify(util, self.signature):
+            log.success('Transaction verified: ' + self.__repr__)
+            return True
+        else:
+            raise InvalidTransactionException(transaction=self, message='Error in transaction verification')
 
+    def calculate_outputs(self):
+        total = 0
+        for utxo in self.transaction_inputs:
+            #already validated so I'm just adding bro
+            total += utxo.amount
+        
+        # Receiver utxo
+        receiver_utxo = Utxo(
+            previous_trans_id=self.transaction_id,
+            amount=self.amount,
+            recipient=self.receiver_address
+        )
+        
+        sender_utxo = Utxo(
+            previous_trans_id=self.transaction_id,
+            amount=total - self.amount, #RESTA
+            recipient=self.sender_address
+        )
+        transaction_outputs = [receiver_utxo, sender_utxo]
+        self.transaction_outputs = transaction_outputs
+        
+        return transaction_outputs
 
+# Everything is serialized except sender's private key
     def to_dict(self):
+        transaction_inputs = list(map(Utxo.to_dict, self.transaction_inputs))
+        transaction_outputs = list(map(Utxo.to_dict, self.transaction_outputs))
         return dict(
             sender_address = self.sender_address,
             receiver_address = self.receiver_address,
             amount = self.amount,
             trans_uuid = self.trans_uuid,
             transaction_id = self.transaction_id,
-            transaction_inputs = self.transaction_inputs,
-            transaction_outputs = self.transaction_outputs,
+            transaction_inputs = transaction_inputs,
+            transaction_outputs = transaction_outputs,
             signature = self.signature
         )
 
-       
+    @classmethod
+    def from_dict(dictionary: dict):
+        transaction_inputs = list(map(Utxo.from_dict, dictionary['transaction_inputs']))
+        transaction_outputs = list(map(Utxo.from_dict, dictionary['transaction_outputs']))
+        return Transaction(
+            sender_address=dictionary['sender_address'],
+            receiver_address=dictionary['receiver_address'],
+            amount=dictionary['amount'],
+            trans_uuid=dictionary['trans_uuid'],
+            transaction_id=dictionary['transaction_id'],
+            transaction_inputs=transaction_inputs,
+            transaction_outputs=transaction_outputs,
+            signature = dictionary['signature']
+        )
+
+    def __repr__(self):
+        return self.amount + ' NBC from ' + self.sender_address + ' to ' + self.receiver_address + self.transaction_inputs   

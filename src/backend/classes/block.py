@@ -3,6 +3,8 @@ from operator import index
 from time import time
 import hashlib
 import os
+from traceback import print_tb
+from backend.exceptions.block import InvalidBlockException
 
 from transaction import Transaction
 
@@ -21,13 +23,16 @@ class Block:
         Returns:
             The unique hash
         '''
-        transaction_table = [t.transaction_id for t in self.transactions]
+        # Using ids instead of object in transactions to avoid different block hash between nodes
+        transaction_table = sum(int(t.transaction_id) for t in self.transactions)
         block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, transaction_table, self.timestamp)
         return hashlib.sha256(block_of_string.encode()).hexdigest()
 
     def add_transaction(self, transaction: Transaction, blockchain):
         #add a transaction to the block
         self.transactions.append(transaction)
+        #update current hash
+        self.current_hash = self.my_hash()
 
     def validate_block(self, previous_block):
         '''Validates a block by checking it's hash and previous hash
@@ -39,13 +44,13 @@ class Block:
         '''
         # Check if current_hash is correct
         if self.current_hash != self.my_hash():
-            return False
+            raise InvalidBlockException(self, block=self, message="This block has invalid hash")
         # Check if previous_hash is equal to previous block's hash
         elif self.previous_hash != previous_block.current_hash:
-            return False
+            raise InvalidBlockException(self, block=self, message="This block has invalid previous hash")
         return True
 
-    def toDictionary(self):
+    def to_dict(self):
         return dict(
             index=self.index,
             nonce=self.nonce,
@@ -56,7 +61,7 @@ class Block:
         )
 
     @classmethod
-    def fromDictionary(blockDict: dict):
+    def from_dict(blockDict: dict):
         return Block(
             index=blockDict['index'],
             nonce=blockDict['nonce'],
@@ -64,3 +69,12 @@ class Block:
             transactions=blockDict['transactions'],
             current_hash=blockDict['current_hash']
         )
+
+    def __repr__(self):
+        transactions_str = ''
+        for i, t in enumerate(self.transactions):
+            transactions_str += '\t' + i + '. ' + t.__repr__
+        return  'Index: ' + self.index + '\n' \
+            +   'Timestamp: ' + self.timestamp + '\n' \
+            +   'Hash: ' + self.hash + '\n' \
+            +   'Transactions: \n' + transactions_str

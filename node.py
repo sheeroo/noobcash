@@ -70,6 +70,32 @@ class Node:
 
 	# def broadcast_block(self):
 
+	def create_transaction(self, receiver, amount):
+
+		if self.wallet.public_key == receiver:
+			raise Exception('You cannot send money to yourself dumdum!')
+		if amount <= 0:
+			raise Exception('You must send something dumdum!')
+		
+		transaction_inp = []
+		total = 0
+		
+		for utxo in self.utxo:
+			if (total < amount):
+				if (utxo['receiver'] == self.wallet.public_key.decode()):
+					total += utxo['amount']
+					transaction_inp.append(utxo)
+			else:
+				break
+		
+		if total >= amount:
+			transaction = Transaction(self.wallet.public_key, self.wallet.private_key, receiver, amount, transaction_inp)
+			
+		if amount > total:
+			raise Exception('Insufficient funds dumdum!')
+		
+		return transaction
+
 	def add_transaction_to_block(self, transaction):
 		'''Add a transaction to block or trigger mining
 		Args:
@@ -90,7 +116,7 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
-		nonce = 0 #nomizw oti ayto einai lathos
+		nonce = 0
 		new_block = None 
 		while True: 
 			if self.cancel_mining:
@@ -104,6 +130,7 @@ class Node:
 			if self.valid_proof(new_block.current_hash):
 				self.brodcast_block(new_block)
 				break
+			nonce += 1
 
 
 	@staticmethod

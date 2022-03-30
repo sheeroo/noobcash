@@ -1,5 +1,6 @@
 import hashlib
 import os
+from threading import Thread
 import requests
 from block import Block
 from blockchain import Blockchain
@@ -138,14 +139,24 @@ class Node:
 			wallet=wallet
 		)
 
-	def broadcast_block(self, url_action, data):
+	def broadcast(self, url_action, data, responses):
 		'''Generic broadcast function using POST http method
 		Args:
 			url_action (String): Url to hit on other nodes,
 			data (Dict): Dictionary to hit body
+		Returns:
+			array of responses
 		'''
-		responses = []
-		for node in self.ring:
+		threads=[]
+		responses=[]
+		def call_func(node, url_action, data, responses):
 			response = requests.post(f'{node.ip}:{node.port}/{url_action}', data=data)
-			responses.add(response)
-		return response
+			responses.append(response)
+		for node in self.ring:
+			thread=Thread(target=call_func, args=(node, url_action, data, responses))
+			threads.append(thread)
+			thread.start()
+
+		for thread in threads:
+			thread.join()
+		return responses

@@ -4,6 +4,8 @@ from time import time
 import hashlib
 import os
 
+from transaction import Transaction
+
 class Block:
     def __init__(self, index, previous_hash, current_hash, nonce, curr_transactions, timestamp):
         self.index = index
@@ -22,7 +24,7 @@ class Block:
         block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, self.transactions, self.timestamp)
         return hashlib.sha256(block_of_string.encode()).hexdigest()
 
-    def add_transaction(self, transaction, blockchain):
+    def add_transaction(self, transaction: Transaction, blockchain):
         #add a transaction to the block
         self.transactions.append(transaction)
 
@@ -53,7 +55,7 @@ class Block:
         )
 
     @classmethod
-    def fromDictionary(blockDict):
+    def fromDictionary(blockDict: dict):
         return Block(
             index=blockDict['index'],
             nonce=blockDict['nonce'],

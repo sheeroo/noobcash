@@ -13,7 +13,7 @@ class TransactionException(NbcException):
 class InvalidTransactionException(TransactionException):
     def __init__(self, transaction: Transaction, message="This transaction is invalid"):
         self.message = message
-        super().__init__(transaction=Transaction, message=self.message)
+        super().__init__(transaction=transaction, message=self.message)
     
 class InsufficientFundsException(TransactionException):
     def __init__(self, message="This transaction is invalid due to insufficient funds"):

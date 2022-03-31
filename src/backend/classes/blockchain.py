@@ -1,16 +1,15 @@
-from itertools import chain
-from backend.classes.transaction import Transaction
-from backend.exceptions.block import InvalidBlockException
-from backend.exceptions.blockchain import InvalidBlockchainException
-from block import Block
+from .block import Block
+from .transaction import Transaction
+from exceptions.block import InvalidBlockException
+from exceptions.blockchain import InvalidBlockchainException
 from time import time
 from utils.debug import log
 
 class Blockchain:
 
-    def __init__(self, chain, transactions_log):
+    def __init__(self, chain=None, transactions_log=None):
         self.chain = chain or []
-        self.transactions_log = [] # log transactions while mining ?
+        self.transactions_log = transactions_log or [] # log transactions while mining ?
     
     def genesis_block(self):
         '''Constructs the genesis block

@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import binascii
 from shutil import ExecError
+import time
 
 import Crypto
 import Crypto.Random
@@ -11,23 +12,24 @@ from Crypto.Signature import PKCS1_v1_5
 
 import requests
 import uuid
-from backend.classes.utxo import Utxo
+from classes.utxo import Utxo
 
-from backend.exceptions.transaction import InvalidTransactionException
-from backend.utils.debug import log
+from exceptions.transaction import InvalidTransactionException
+from utils.debug import log
 
 class Transaction:
     def __init__(
-            self, 
-            sender_address, 
-            sender_private_key, 
-            receiver_address, 
-            amount, 
-            transaction_inputs,
-            transaction_outputs, 
-            signature, 
-            transaction_id,
-            trans_uuid
+        self, 
+        sender_address, 
+        sender_private_key, 
+        receiver_address, 
+        amount, 
+        transaction_inputs,
+        transaction_outputs, 
+        signature, 
+        transaction_id,
+        trans_uuid,
+        timestamp
     ):
         self.sender_address = sender_address
         self.receiver_address = receiver_address
@@ -37,6 +39,7 @@ class Transaction:
         self.transaction_inputs: list(Utxo) = transaction_inputs
         self.transaction_outputs = transaction_outputs or []
         self.signature = signature and sender_private_key or self.sign_transaction(sender_private_key)
+        self.timestamp = timestamp or time.time()
         
     def sign_transaction(self, sender_private_key):
         """
@@ -96,7 +99,8 @@ class Transaction:
             transaction_id = self.transaction_id,
             transaction_inputs = transaction_inputs,
             transaction_outputs = transaction_outputs,
-            signature = self.signature
+            signature = self.signature,
+            timestamp = self.timestamp
         )
 
     @classmethod
@@ -111,8 +115,9 @@ class Transaction:
             transaction_id=dictionary['transaction_id'],
             transaction_inputs=transaction_inputs,
             transaction_outputs=transaction_outputs,
-            signature = dictionary['signature']
+            signature = dictionary['signature'],
+            timestamp=dictionary['timestamp']
         )
 
     def __repr__(self):
-        return self.amount + ' NBC from ' + self.sender_address + ' to ' + self.receiver_address + self.transaction_inputs   
+        return self.amount + ' NBC from ' + self.sender_address + ' to ' + self.receiver_address + self.transaction_inputs + ' at ' + self.timestamp  

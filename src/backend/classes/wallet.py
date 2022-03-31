@@ -13,7 +13,7 @@ from uuid import uuid4
 
 class Wallet:
 
-	def __init__(self, public_key, private_key):
+	def __init__(self, public_key=None, private_key=None):
 		##set
 
 		key = RSA.generate(2048)
@@ -22,7 +22,8 @@ class Wallet:
 		#self_address
 		#self.transactions
 	
-	def balance(self):
-		'''Returns:
-            Int: the balance of the wallet
-        '''
+	def to_dict(self):
+		return dict(
+			public_key=self.public_key,
+			private_key=self.private_key
+		)

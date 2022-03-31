@@ -12,34 +12,35 @@ class Decoration:
     BOLD = '\u001b[1m'
     UNDERLINE = '\u001b[4m'
     REVERSED = '\u001b[7m'
+    CLEAR = '\u001b[0m'
 
     @staticmethod
     def clear():
         print('\u001b[0m')
 
 class log:
-    @classmethod
+    @staticmethod
     def info(*args, header: str = ''):
         print(Decoration.UNDERLINE, header)
         Decoration.clear()
-        print(Colors.INFO, Decoration.BOLD, *args)
+        print(Colors.INFO, *args)
         Colors.clear()
         Decoration.clear()
 
-    @classmethod
+    @staticmethod
     def success(*args):
-        print(Colors.SUCCESS, Decoration.BOLD, *args)
+        print(Colors.SUCCESS, *args)
         Colors.clear()
         Decoration.clear()
 
-    @classmethod
+    @staticmethod
     def warning(*args):
-        print(Colors.WARNING, Decoration.BOLD, *args)
+        print(Colors.WARNING, *args)
         Colors.clear()
         Decoration.clear()
 
-    @classmethod
+    @staticmethod
     def error(*args):
-        print(Colors.ERROR, Decoration.BOLD, *args)
+        print(Colors.ERROR, *args)
         Colors.clear()
         Decoration.clear()

@@ -12,7 +12,7 @@ def broadcast(ring, url_action, data, responses):
 		threads=[]
 		responses=[]
 		def call_func(node, url_action, data, responses):
-			response = requests.post(f'{node.ip}:{node.port}/{url_action}', data=data)
+			response = requests.post(f'http://{node.ip}:{node.port}/{url_action}', json=data)
 			responses.append(response)
 		for node in ring:
 			thread=Thread(target=call_func, args=(node, url_action, data, responses))

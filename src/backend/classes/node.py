@@ -1,16 +1,17 @@
 import hashlib
 import os
 import requests
-from backend.classes.utxo import Utxo
-from backend.exceptions.transaction import InsufficientFundsException, InvalidTransactionException
-from backend.utils.debug import log
-from block import Block
-from blockchain import Blockchain
-from transaction import Transaction
-from wallet import Wallet
+from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
+from utils.debug import log, Decoration
+from utils import helper
+from .block import Block
+from .blockchain import Blockchain
+from .transaction import Transaction
+from .wallet import Wallet
+from .utxo import Utxo
 
 class Node:
-	def __init__(self, ip, port, wallet):
+	def __init__(self, ip, port, wallet=None):
 		self.blockchain = Blockchain()
 		self.wallet = wallet or self.create_wallet()
 		self.ring = []
@@ -18,6 +19,7 @@ class Node:
 		self.port = port
 		self.ip = ip
 		self.cancel_mining = False
+		self.id = None
 		#self.id to be set later
 		#self.current_id_count
 		#self.NBCs
@@ -33,11 +35,12 @@ class Node:
 			bootstrap_port (Int): Port of bootstrap node	
 		'''
 		try:
-			response = requests.post(f'{bootstrap_ip}:{bootstrap_port}/subscribe', 
-				data=self.to_dict()
+			response = requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/subscribe', 
+				json=self.to_dict()
 			)
 			response_data = response.json()
 			self.id = response_data['id']
+			log.success(f'Registered node {self.id} to ring.')
 		except requests.HTTPError as errorh:
 			log.error(f'Oops, {errorh}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {errorh}')
@@ -46,10 +49,13 @@ class Node:
 			raise Exception(f'Cannot subscribe to bootstrap node due to {error}')
 		
 	def register_node_to_ring(self, node):
-		next_id = self.ring[-1].id + 1
+		if len(self.ring):
+			next_id = self.ring[-1].id + 1
+		else:
+			next_id = 1
 		node.id = next_id
-		self.ring.add(node)
-
+		self.ring.append(node)
+		log.success(f'Registered node {Decoration.REVERSED}{node.id}{Decoration.CLEAR} to ring.')
 		return next_id
 
 	''' Wallet is being created in init '''
@@ -57,17 +63,21 @@ class Node:
 		#create a wallet for this node, with a public key and a private key
 		return Wallet()
 
-	# def balance(self,recipient, utxos):
-
-	# 	amount = 0
-	# 	for utxo in utxos:
-	# 		amount += utxo
+	def wallet_balance(self, public_key):
+		amount = 0
+		for utxo in self.utxo:
+			if utxo.recipient == public_key:
+				amount += utxo.amount
 		
-	# 	return amount
+		return amount
 
-	# def broadcast_transaction(self):
+	def broadcast_transaction(self, transaction: Transaction):
+		responses = []
+		helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), responses)
 
-	# def broadcast_block(self):
+	def broadcast_block(self, block: Block):
+		responses = []
+		helper.broadcast(self.ring, '/block/receive', block.to_dict(), responses)
 
 	def validate_transaction(self, transaction: Transaction):
 		#use of signature and NBCs balance
@@ -114,19 +124,18 @@ class Node:
 		
 		for utxo in self.utxo:
 			if (total < amount):
-				if (utxo['receiver'] == self.wallet.public_key.decode()):
-					total += utxo['amount']
+				if (utxo.recipient == self.wallet.public_key.decode()):
+					total += utxo.amount
 					transaction_inp.append(utxo)
 			else:
 				break
-		
-		if total >= amount:
-			transaction = Transaction(self.wallet.public_key, self.wallet.private_key, receiver, amount, transaction_inp)
 			
 		if amount > total:
 			raise InsufficientFundsException('Insufficient funds dumdum!')
 		
+		transaction = Transaction(self.wallet.public_key, self.wallet.private_key, receiver, amount, transaction_inp)
 		# Broadcast transaction
+		self.broadcast_transaction(transaction)
 		return transaction
 
 	def add_transaction_to_block(self, transaction):
@@ -192,10 +201,10 @@ class Node:
 		return dict(
 			ip=self.ip,
 			port=self.port,
-			public_key=self.wallet.public_key
+			public_key=self.wallet.public_key.decode()
 		)
 	
-	@classmethod
+	@staticmethod
 	def from_dict(nodeDict: dict):
 		wallet = Wallet(public_key=nodeDict['public_key'], private_key='')
 		return Node(
@@ -204,3 +213,8 @@ class Node:
 			wallet=wallet
 		)
 
+	def __str__(self):
+		ring = ''
+		for i in self.ring:
+			ring += i.__str__()
+		return f'{Decoration.UNDERLINE}Node:{Decoration.CLEAR} \n\tid -> {self.id} \n\tring -> [{ring}]'

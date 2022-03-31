@@ -3,10 +3,8 @@ from operator import index
 from time import time
 import hashlib
 import os
-from traceback import print_tb
-from backend.exceptions.block import InvalidBlockException
-
-from transaction import Transaction
+from exceptions.block import InvalidBlockException
+from .transaction import Transaction
 
 class Block:
     def __init__(self, index, previous_hash, current_hash, nonce, curr_transactions, timestamp):

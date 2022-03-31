@@ -161,7 +161,7 @@ class Node:
 				nonce=nonce,
 				curr_transactions=[transaction]
 			)
-			if self.valid_proof(new_block.current_hash):
+			if Node.valid_proof(new_block.current_hash):
 				self.brodcast_block(new_block)
 				break
 			nonce += 1

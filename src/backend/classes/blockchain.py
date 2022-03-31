@@ -33,13 +33,13 @@ class Blockchain:
         block = Block(
             index=len(self.chain),
             nonce=nonce,
-            curr_transactions=self.curr_transactions,
+            curr_transactions=self.transactions_log,
             previous_hash=previous_hash,
             timestamp=time.time()
         )
 
         #reset current transactions
-        self.curr_transactions = []
+        self.transactions_log = []
         
         #add block to blockchain
         self.chain.append(block)

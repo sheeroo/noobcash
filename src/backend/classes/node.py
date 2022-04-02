@@ -190,7 +190,9 @@ class Node:
 	#concensus functions
 
 	def resolve_conflict(self):
-		
+		'''Resolves conflicts by returning the longest chain
+		'''
+
 		max_length = len(self.blockchain.chain)
 
 		for node in self.ring:
@@ -206,16 +208,6 @@ class Node:
 		
 		return False
 
-
-	# def valid_chain(self, chain):
-	# 	#check for the longer chain across all nodes
-
-	# def resolve_conflicts(self):
-	# 	#resolve correct chain
-
-	# def register_node_to_ring(self):
-	# 	#add this node to the ring, only the bootstrap node can add a node to the ring after checking his wallet and ip:port address
-	# 	#boοtstrap node informs all other nodes and gives the request node an id and 100 NBCs
 	def to_dict(self):
 		return dict(
 			ip=self.ip,

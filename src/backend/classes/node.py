@@ -1,5 +1,6 @@
 import hashlib
 import os
+from pydoc import resolve
 import requests
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
 from utils.debug import log, Decoration
@@ -187,6 +188,24 @@ class Node:
 		return block_hash[:difficulty] == '0' * difficulty
 
 	#concensus functions
+
+	def resolve_conflict(self):
+		
+		max_length = len(self.blockchain.chain)
+
+		for node in self.ring:
+			
+			chain_length = len(node.blockchain.chain)
+
+			if chain_length > max_length:
+				max_length = chain_length
+				resolved_chain = node.blockchain.chain
+			
+		if resolved_chain:
+			return resolved_chain
+		
+		return False
+
 
 	# def valid_chain(self, chain):
 	# 	#check for the longer chain across all nodes

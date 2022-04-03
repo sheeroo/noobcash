@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+from pydoc import resolve
 import requests
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
 from utils.debug import log, Decoration
@@ -189,15 +190,25 @@ class Node:
 
 	#concensus functions
 
-	# def valid_chain(self, chain):
-	# 	#check for the longer chain across all nodes
+	def resolve_conflict(self):
+		'''Resolves conflicts by returning the longest chain
+		'''
 
-	# def resolve_conflicts(self):
-	# 	#resolve correct chain
+		max_length = len(self.blockchain.chain)
 
-	# def register_node_to_ring(self):
-	# 	#add this node to the ring, only the bootstrap node can add a node to the ring after checking his wallet and ip:port address
-	# 	#boοtstrap node informs all other nodes and gives the request node an id and 100 NBCs
+		for node in self.ring:
+			
+			chain_length = len(node.blockchain.chain)
+
+			if chain_length > max_length:
+				max_length = chain_length
+				resolved_chain = node.blockchain.chain
+			
+		if resolved_chain:
+			return resolved_chain
+		
+		return False
+
 	def to_dict(self):
 		ring=[node.to_dict() for node in self.ring]
 		return dict(

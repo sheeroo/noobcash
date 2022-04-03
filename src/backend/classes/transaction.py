@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import binascii
+import json
 from shutil import ExecError
 import time
 
@@ -38,7 +39,7 @@ class Transaction:
         self.transaction_id = transaction_id or SHA256.new(self.trans_uuid).hexdigest() #hexnumber
         self.transaction_inputs: list(Utxo) = transaction_inputs
         self.transaction_outputs = transaction_outputs or []
-        self.signature = signature and sender_private_key or self.sign_transaction(sender_private_key)
+        self.signature = signature and sender_private_key or self.sign_transaction(sender_private_key) # MIGHT BE BUG
         self.timestamp = timestamp or time.time()
         
     def sign_transaction(self, sender_private_key):
@@ -118,6 +119,9 @@ class Transaction:
             signature = dictionary['signature'],
             timestamp=dictionary['timestamp']
         )
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=4)
 
     def __repr__(self):
         return self.amount + ' NBC from ' + self.sender_address + ' to ' + self.receiver_address + self.transaction_inputs + ' at ' + self.timestamp  

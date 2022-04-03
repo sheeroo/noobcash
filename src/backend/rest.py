@@ -4,12 +4,14 @@ from flask_cors import CORS
 from exceptions.transaction import InsufficientFundsException
 from utils.debug import log
 
-
 # from classes.block import Block
 from classes.node import Node
 # from classes.blockchain import Blockchain
 # from classes.wallet import Wallet
 # from classes.transaction import Transaction
+from dotenv import load_dotenv
+
+load_dotenv()  # take environment variables from .env
 
 app = Flask(__name__)
 CORS(app)
@@ -65,6 +67,11 @@ def print_node():
     log.info(node)
     return jsonify(node.to_dict()), 200
 
+@app.route('/debug/blockchain', methods=['GET'])
+def print_blockchain():
+    log.info(node.blockchain)
+    return jsonify(node.blockchain.to_dict()), 200
+
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
@@ -87,6 +94,7 @@ if __name__ == '__main__':
         if ip == bootstrap_ip and port == bootstrap_port:
             # You are the bootstrap node
             node.id = 0
+            # Create genesis block
             log.info('You are the bootstrap node')
             log.info(node)
         else:

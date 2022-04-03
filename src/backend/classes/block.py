@@ -7,10 +7,10 @@ from exceptions.block import InvalidBlockException
 from .transaction import Transaction
 
 class Block:
-    def __init__(self, index, previous_hash, current_hash, nonce, curr_transactions, timestamp):
+    def __init__(self, index, previous_hash, nonce, current_hash=None, curr_transactions=None, timestamp=None):
         self.index = index
         self.timestamp = timestamp or time.time()
-        self.transactions = curr_transactions
+        self.transactions = curr_transactions or []
         self.nonce = nonce
         self.previous_hash = previous_hash
         self.current_hash = current_hash or self.my_hash()
@@ -26,7 +26,7 @@ class Block:
         block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, transaction_table, self.timestamp)
         return hashlib.sha256(block_of_string.encode()).hexdigest()
 
-    def add_transaction(self, transaction: Transaction, blockchain):
+    def add_transaction(self, transaction: Transaction):
         #add a transaction to the block
         self.transactions.append(transaction)
         #update current hash

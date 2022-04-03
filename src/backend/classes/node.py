@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-from pydoc import resolve
 import requests
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
 from utils.debug import log, Decoration
@@ -114,12 +113,14 @@ class Node:
 		except InvalidTransactionException as e:
 			raise e
 
-	def create_transaction(self, receiver, amount):
+	def create_transaction(self, recipient, amount):
 
-		if self.wallet.public_key == receiver:
-			raise Exception('You cannot send money to yourself dumdum!')
 		if amount <= 0:
-			raise Exception('You must send something dumdum!')
+			raise InvalidTransactionException('You must send something dumdum!')
+		if self.wallet.public_key.decode() == recipient:
+			raise InvalidTransactionException('You cannot send money to yourself dumdum!')
+		if recipient not in [i.wallet.public_key.decode() for i in self.ring]:
+			raise InvalidTransactionException('Unknown recipient')
 		
 		transaction_inp = []
 		total = 0
@@ -135,7 +136,7 @@ class Node:
 		if amount > total:
 			raise InsufficientFundsException('Insufficient funds dumdum!')
 		
-		transaction = Transaction(self.wallet.public_key, self.wallet.private_key, receiver, amount, transaction_inp)
+		transaction = Transaction(self.wallet.public_key, self.wallet.private_key, recipient, amount, transaction_inp)
 		# Broadcast transaction
 		self.broadcast_transaction(transaction)
 		return transaction
@@ -192,17 +193,24 @@ class Node:
 
 	def resolve_conflict(self):
 		'''Resolves conflicts by returning the longest chain
+
+		Args:
+			nodes(list(Blockchain)): Returned data from requested resolve
 		'''
+		checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
+		result = []
+		helper.broadcast(self.ring, '/blockchain/get', checkpoint_dict, result)
+
 
 		max_length = len(self.blockchain.chain)
 
-		for node in self.ring:
+		for blockchain in result:
 			
-			chain_length = len(node.blockchain.chain)
+			chain_length = len(blockchain.chain)
 
 			if chain_length > max_length:
 				max_length = chain_length
-				resolved_chain = node.blockchain.chain
+				resolved_chain = blockchain.chain
 			
 		if resolved_chain:
 			return resolved_chain

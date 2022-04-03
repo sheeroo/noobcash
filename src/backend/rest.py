@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
-from backend.exceptions.transaction import InsufficientFundsException
+from exceptions.transaction import InsufficientFundsException
 from utils.debug import log
 
 

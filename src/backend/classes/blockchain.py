@@ -72,8 +72,8 @@ class Blockchain:
 
 # class utilities
     def to_dict(self):
-        result_chain = list(map(Block.to_dict, self.chain))
-        result_transactions_log = list(map(Transaction.to_dict, self.transactions_log))
+        result_chain = [block.to_dict() for block in self.chain]
+        result_transactions_log = [transaction.to_dict() for transaction in self.transactions_log]
         return dict(
             chain=result_chain,
             transactions_log=result_transactions_log

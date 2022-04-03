@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import requests
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
@@ -198,15 +199,17 @@ class Node:
 	# 	#add this node to the ring, only the bootstrap node can add a node to the ring after checking his wallet and ip:port address
 	# 	#boοtstrap node informs all other nodes and gives the request node an id and 100 NBCs
 	def to_dict(self):
+		ring=[node.to_dict() for node in self.ring]
 		return dict(
 			ip=self.ip,
 			port=self.port,
-			public_key=self.wallet.public_key.decode()
+			public_key=self.wallet.public_key.decode(),
+			ring=ring
 		)
 	
 	@staticmethod
 	def from_dict(nodeDict: dict):
-		wallet = Wallet(public_key=nodeDict['public_key'], private_key='')
+		wallet = Wallet(public_key=nodeDict['public_key'].encode(), private_key='')
 		return Node(
 			ip=nodeDict['ip'],
 			port=nodeDict['port'],
@@ -214,7 +217,4 @@ class Node:
 		)
 
 	def __str__(self):
-		ring = ''
-		for i in self.ring:
-			ring += i.__str__()
-		return f'{Decoration.UNDERLINE}Node:{Decoration.CLEAR} \n\tid -> {self.id} \n\tring -> [{ring}]'
+		return json.dumps(self.to_dict(), indent=4)

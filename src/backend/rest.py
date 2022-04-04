@@ -54,6 +54,7 @@ def subscribe():
         )
 
         new_node.create_transaction(first_transaction)
+        new_node.add_transaction_to_block(first_transaction)
 
         return jsonify(response), 200
 

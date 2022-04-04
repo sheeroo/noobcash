@@ -1,8 +1,10 @@
 # import blockchain
+import json
 from operator import index
 from time import time
 import hashlib
 import os
+from utils.debug import log
 from exceptions.block import InvalidBlockException
 from .transaction import Transaction
 
@@ -22,8 +24,8 @@ class Block:
             The unique hash
         '''
         # Using ids instead of object in transactions to avoid different block hash between nodes
-        transaction_table = sum(int(t.transaction_id) for t in self.transactions)
-        block_of_string = "{}{}{}{}{}".format(self.previous_hash, self.nonce, transaction_table, self.timestamp)
+        transaction_table = sum(int(t.transaction_id, 16) for t in self.transactions)
+        block_of_string = "{}{}{}{}".format(self.previous_hash, self.nonce, transaction_table, self.timestamp)
         return hashlib.sha256(block_of_string.encode()).hexdigest()
 
     def add_transaction(self, transaction: Transaction):
@@ -49,13 +51,15 @@ class Block:
         return True
 
     def to_dict(self):
+        transactions = [t.to_dict() for t in self.transactions]
+
         return dict(
             index=self.index,
             nonce=self.nonce,
             current_hash=self.current_hash,
             previous_hash=self.previous_hash,
             timestamp=self.timestamp,
-            transactions=self.transactions
+            transactions=transactions
         )
 
     @classmethod
@@ -67,6 +71,9 @@ class Block:
             transactions=blockDict['transactions'],
             current_hash=blockDict['current_hash']
         )
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=4)
 
     def __repr__(self):
         transactions_str = ''

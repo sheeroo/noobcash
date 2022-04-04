@@ -1,8 +1,9 @@
 import os
+from time import time
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
-from exceptions.transaction import InsufficientFundsException
-from noobcash.src.backend.classes.transaction import Transaction
+from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
+from classes.transaction import Transaction
 from utils.debug import log
 
 # from classes.block import Block
@@ -22,12 +23,37 @@ node = None
 
 # get all transactions in the blockchain
 
-@app.route('/transactions/get', methods=['GET'])
-def get_transactions():
-    transactions = node.transactions
+@app.route('/transactions/receive', methods=['GET'])
+def receive_transaction():
+    transaction_dict = request.json
+    transaction = Transaction.from_dict(transaction_dict)
 
-    response = { 'transactions': transactions }
-    return jsonify(response), 200
+    node.tx_queue_lock.acquire()
+    if len(node.tx_queue == 0) or transaction.timestamp > node.tx_queue[-1].timestamp:
+        node.tx_queue.append(transaction)
+    else:
+        # Insert at proper position according to timestamp
+        i = 0
+        while transaction.timestamp > node.tx_queue[i].timestamp:
+            i+=1
+        node.tx_queue.insert(i, transaction)
+    
+    node.tx_queue_lock.release()
+
+    # Sleep to exploit flask multithreading and locking for other requests capture by threads to insert their transactions
+    time.sleep(0.5)
+    node.tx_queue_lock.acquire()
+    new_transaction = node.tx_queue.pop(0)
+
+    node.utxo_lock.acquire()
+    try:
+        node.validate_transaction(new_transaction)
+        response = { 'transaction_outputs': new_transaction.transaction_outputs }
+        return jsonify(response), 200
+    except InvalidTransactionException as e:
+        response = { 'error': True, 'message': e.message }
+        return jsonify(response), 400
+
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
@@ -44,17 +70,9 @@ def subscribe():
         '''
             Need to implement the transaction to give initial 100 NBC to this node!!
         '''
+        receiver_pub = new_node.wallet.public_key.decode()
 
-        first_transaction = Transaction(
-            node.wallet.public_key.decode(),
-            node.wallet.private_key.decode(),
-            new_node.wallet.public_key,
-            100,
-            node.utxo
-        )
-
-        new_node.create_transaction(first_transaction)
-        new_node.add_transaction_to_block(first_transaction)
+        node.create_transaction(receiver_pub, 100)
 
         return jsonify(response), 200
 
@@ -108,8 +126,10 @@ if __name__ == '__main__':
             # You are the bootstrap node
             node.id = 0
             # Create genesis block
+            node.genesis_block()
             log.info('You are the bootstrap node')
             log.info(node)
+            log.info(node.blockchain.last_block.__str__(), header='Genesis block')
         else:
             # Try to subscribe to bootstrap node
             node.subscribe(bootstrap_ip=bootstrap_ip, bootstrap_port=bootstrap_port)

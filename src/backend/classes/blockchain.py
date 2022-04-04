@@ -1,11 +1,12 @@
 import json
 import os
+
 from .utxo import Utxo
 from .block import Block
 from .transaction import Transaction
 from exceptions.block import InvalidBlockException
 from exceptions.blockchain import InvalidBlockchainException
-from time import time
+import time
 from utils.debug import log
 
 class Blockchain:
@@ -15,34 +16,6 @@ class Blockchain:
         self.transactions_log = transactions_log or [] # log transactions while mining ?
         self.checkpoint = 0
     
-    def genesis_block(self, bootstrap_address):
-        '''Constructs the genesis block
-        
-        Returns:
-            Block: the genesis block (nonce = 0 and previous hash = 1)
-        '''
-        block = self.construct_block(nonce=0, previous_hash=1)
-        nodes = int(os.getenv('NODES'))
-        amount = 100*nodes
-
-        transaction_outputs = Utxo(
-            previous_trans_id=0,
-            amount=amount,
-            recipient=bootstrap_address
-        )
-
-        genesis_transaction = Transaction(
-            sender_address=0,
-            sender_private_key=0,
-            receiver_address=bootstrap_address,
-            amount=amount,
-            transaction_inputs=[],
-            transaction_outputs=[transaction_outputs]
-        )
-
-        block.add_transaction(genesis_transaction, self)
-        return 
-
     def construct_block(self, nonce, previous_hash):
         '''Constructs a new block after PoW and appends it to the blockchain
 
@@ -53,16 +26,13 @@ class Blockchain:
         Returns:
             Block: the created block
         '''
+        # No current transactions because while mining transactions are receiving 
         block = Block(
             index=len(self.chain),
             nonce=nonce,
-            curr_transactions=self.transactions_log,
             previous_hash=previous_hash,
             timestamp=time.time()
         )
-
-        #reset current transactions
-        self.transactions_log = []
         
         #add block to blockchain
         self.chain.append(block)
@@ -122,7 +92,7 @@ class Blockchain:
             transactions_log=result_transactions_log
         )
     
-    def to_dict(self, checkpoint):
+    def to_dict_with_checkpoint(self, checkpoint):
         '''To dict overloaded with checkpoint argument to take chain from checkpoint index and after
 
         Args:

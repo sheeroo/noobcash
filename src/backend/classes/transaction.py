@@ -22,15 +22,15 @@ class Transaction:
     def __init__(
         self, 
         sender_address, 
-        sender_private_key, 
+        sender_private_key: str, 
         receiver_address, 
         amount, 
         transaction_inputs,
-        transaction_outputs, 
-        signature, 
-        transaction_id,
-        trans_uuid,
-        timestamp
+        transaction_outputs=None, 
+        signature=None, 
+        transaction_id=None,
+        trans_uuid=None,
+        timestamp=None
     ):
         self.sender_address = sender_address
         self.receiver_address = receiver_address
@@ -39,7 +39,7 @@ class Transaction:
         self.transaction_id = transaction_id or SHA256.new(self.trans_uuid).hexdigest() #hexnumber
         self.transaction_inputs: list(Utxo) = transaction_inputs
         self.transaction_outputs = transaction_outputs or []
-        self.signature = signature and sender_private_key or self.sign_transaction(sender_private_key) # MIGHT BE BUG
+        self.signature = signature or self.sign_transaction(sender_private_key)
         self.timestamp = timestamp or time.time()
         
     def sign_transaction(self, sender_private_key):
@@ -96,11 +96,10 @@ class Transaction:
             sender_address = self.sender_address,
             receiver_address = self.receiver_address,
             amount = self.amount,
-            trans_uuid = self.trans_uuid,
             transaction_id = self.transaction_id,
             transaction_inputs = transaction_inputs,
             transaction_outputs = transaction_outputs,
-            signature = self.signature,
+            signature = self.signature.decode(encoding="ISO-8859-1"),
             timestamp = self.timestamp
         )
 
@@ -112,11 +111,10 @@ class Transaction:
             sender_address=dictionary['sender_address'],
             receiver_address=dictionary['receiver_address'],
             amount=dictionary['amount'],
-            trans_uuid=dictionary['trans_uuid'],
             transaction_id=dictionary['transaction_id'],
             transaction_inputs=transaction_inputs,
             transaction_outputs=transaction_outputs,
-            signature = dictionary['signature'],
+            signature = dictionary['signature'].encode(),
             timestamp=dictionary['timestamp']
         )
 

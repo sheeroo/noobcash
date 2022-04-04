@@ -2,8 +2,8 @@ import uuid
 
 
 class Utxo:
-    def __init__(self, id, previous_trans_id, amount, recipient):
-        self.id = id or uuid.uuid4()
+    def __init__(self, previous_trans_id, amount, recipient, id=None):
+        self.id = id or uuid.uuid4().bytes.hex()
         self.previous_trans_id = previous_trans_id
         self.amount = amount
         self.recipient = recipient

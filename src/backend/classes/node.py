@@ -1,6 +1,9 @@
+from concurrent.futures import thread
 import hashlib
 import json
 import os
+from threading import Thread
+import threading
 import requests
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
 from utils.debug import log, Decoration
@@ -17,17 +20,56 @@ class Node:
 		self.wallet = wallet or self.create_wallet()
 		self.ring = []
 		self.utxo: list(Utxo) = []
+		self.utxo_lock = threading.Lock()
 		self.port = port
 		self.ip = ip
 		self.cancel_mining = False
 		self.id = None
+		self.tx_queue = []
+		self.tx_queue_lock = threading.Lock()
+		self.tx_log = []
+		self.tx_log_lock = threading.Lock()
 		#self.id to be set later
 		#self.current_id_count
 		#self.NBCs
 		#self.wallet
 
+	@property
 	def is_bootstrap(self):
 		return self.id == 0
+
+	def genesis_block(self):
+		'''Constructs the genesis block
+        Args:
+            bootstrap_node
+        Returns:
+            Block: the genesis block (nonce = 0 and previous hash = 1)
+        '''
+		bootstrap_address = self.wallet.public_key.decode()
+		genesis_block = self.blockchain.construct_block(nonce=0, previous_hash=1)
+		nodes = int(os.getenv('NODES'))
+		amount = 100*nodes
+
+		transaction_outputs = Utxo(
+            previous_trans_id=0,
+            amount=amount,
+            recipient=bootstrap_address
+        )
+		
+		genesis_transaction = Transaction(
+            sender_address='0',
+            sender_private_key='0',
+			signature=b'0', # Adding to avoid sign_signature to run
+            receiver_address=bootstrap_address,
+            amount=amount,
+            transaction_inputs=[],
+            transaction_outputs=[transaction_outputs]
+        )
+
+		genesis_block.add_transaction(genesis_transaction)
+
+        # First utxo of node
+		self.utxo = [transaction_outputs]
 
 	def subscribe(self, bootstrap_ip, bootstrap_port):
 		'''Calls bootstrap node to request id and give life signs
@@ -104,10 +146,10 @@ class Node:
 			transaction_outputs = transaction.calculate_outputs()
 
 			# Remove utxos used
-			self.utxos = [utxo for utxo in self.utxo if utxo.id not in utxos_used]
+			self.utxo = [utxo for utxo in self.utxo if utxo.id not in utxos_used]
 
 			# Add transaction outputs
-			self.utxos.extend(transaction_outputs)
+			self.utxo.extend(transaction_outputs)
 
 			return True
 		except InvalidTransactionException as e:
@@ -139,6 +181,8 @@ class Node:
 		transaction = Transaction(self.wallet.public_key, self.wallet.private_key, recipient, amount, transaction_inp)
 		# Broadcast transaction
 		self.broadcast_transaction(transaction)
+
+		self.add_transaction_to_block(transaction)
 		return transaction
 
 	def add_transaction_to_block(self, transaction):

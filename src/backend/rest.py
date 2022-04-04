@@ -2,6 +2,7 @@ import os
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from exceptions.transaction import InsufficientFundsException
+from noobcash.src.backend.classes.transaction import Transaction
 from utils.debug import log
 
 # from classes.block import Block
@@ -31,7 +32,7 @@ def get_transactions():
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
     if not node.is_bootstrap:
-        response = { 'error': True, 'message': 'I ain\'t bootstrap m8' }
+        response = { 'error': True, 'message': "I ain't bootstrap m8" }
         return jsonify(response), 400
     else:
         data = request.json
@@ -43,6 +44,17 @@ def subscribe():
         '''
             Need to implement the transaction to give initial 100 NBC to this node!!
         '''
+
+        first_transaction = Transaction(
+            node.wallet.public_key.decode(),
+            node.wallet.private_key.decode(),
+            new_node.wallet.public_key,
+            100,
+            node.utxo
+        )
+
+        new_node.create_transaction(first_transaction)
+
         return jsonify(response), 200
 
 @app.route('/transaction/create', methods=['POST'])

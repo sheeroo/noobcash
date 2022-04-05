@@ -1,7 +1,7 @@
 # import blockchain
 import json
 from operator import index
-from time import time
+import time
 import hashlib
 import os
 from utils.debug import log
@@ -62,7 +62,7 @@ class Block:
             transactions=transactions
         )
 
-    @classmethod
+    @staticmethod
     def from_dict(blockDict: dict):
         return Block(
             index=blockDict['index'],

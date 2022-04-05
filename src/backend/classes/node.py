@@ -57,7 +57,7 @@ class Node:
         )
 		
 		genesis_transaction = Transaction(
-            sender_address='0',
+            sender_address=b'0',
             sender_private_key='0',
 			signature=b'0', # Adding to avoid sign_signature to run
             receiver_address=bootstrap_address,
@@ -116,7 +116,7 @@ class Node:
 
 	def broadcast_transaction(self, transaction: Transaction):
 		responses = []
-		helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), responses)
+		helper.broadcast(self.ring, '/transactions/receive', transaction.to_dict(), responses)
 
 	def broadcast_block(self, block: Block):
 		responses = []
@@ -124,6 +124,7 @@ class Node:
 
 	def validate_transaction(self, transaction: Transaction):
 		#use of signature and NBCs balance
+		log.info(f'Validating transaction: {transaction.__str__()}...')
 		try:
 			transaction.verify_signature()
 		except InvalidTransactionException as e:
@@ -178,7 +179,13 @@ class Node:
 		if amount > total:
 			raise InsufficientFundsException('Insufficient funds dumdum!')
 		
-		transaction = Transaction(self.wallet.public_key, self.wallet.private_key, recipient, amount, transaction_inp)
+		transaction = Transaction(
+			sender_address=self.wallet.public_key, 
+			sender_private_key=self.wallet.private_key, 
+			receiver_address=recipient, 
+			amount=amount, 
+			transaction_inputs=transaction_inp
+		)
 		# Broadcast transaction
 		self.broadcast_transaction(transaction)
 
@@ -191,8 +198,8 @@ class Node:
 			transaction (Transaction): Broadcasted transaction
 		'''
 		capacity = int(os.getenv('MAX_CAPACITY'))
-		last_block = self.blockchain.last_block()
-		if len(last_block.transactions) < capacity:
+		last_block = self.blockchain.last_block
+		if len(last_block.transactions) < capacity and last_block.index != 0:
 			last_block.add_transaction(transaction)
 		else:
 			self.mine_block(last_block, transaction)
@@ -205,12 +212,14 @@ class Node:
 			previous_block (Block): The previous block (the last of the chain)
 			transaction (Transaction): The new transaction
 		'''
+		log.info('Mining...')
 		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
 		nonce = 0
 		new_block = None 
 		while True: 
 			if self.cancel_mining:
-				break
+				log.info('Received block. Stoping...')
+				return
 			new_block = Block(
 				index=previous_block.index + 1,
 				previous_hash=previous_block.current_hash,
@@ -218,9 +227,13 @@ class Node:
 				curr_transactions=[transaction]
 			)
 			if Node.valid_proof(new_block.current_hash):
-				self.brodcast_block(new_block)
+				# Add it to chain
+				self.blockchain.chain.append(new_block)
+				#Broadcast the block
+				self.broadcast_block(new_block)
 				break
 			nonce += 1
+		log.info('Mined!')
 
 	@staticmethod
 	def valid_proof(block_hash):

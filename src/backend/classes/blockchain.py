@@ -73,11 +73,11 @@ class Blockchain:
         log.info(dictionary, header='Blockchain sent dict: ')
 
         before_checkpoint = self.chain[:self.checkpoint]
-        after_chekpoint = list(map(Block.from_dict, dictionary['chain']))
+        after_chekpoint = [Block.from_dict(b) for b in dictionary['chain']]
         result_chain = before_checkpoint.extend(after_chekpoint)
         log.info(result_chain, header='Result chain: ')
 
-        transaction_log = map(Transaction.from_dict, dictionary['transaction_log'])
+        transaction_log = [Transaction.from_dict(t) for t in dictionary['transaction_log']]
 
         log.info([transaction.__str__() for transaction in transaction_log])
 
@@ -107,9 +107,9 @@ class Blockchain:
             transactions_log=result_transactions_log
         )
 
-    @classmethod
+    @staticmethod
     def from_dict(dictionary: dict):
-        result_chain = list(map(Block.from_dict, dictionary['chain']))
+        result_chain = [Block.from_dict(b) for b in dictionary['chain']]
         log.info(dictionary, header='Blockchain received dict: ')
         return Blockchain(
 			chain=result_chain

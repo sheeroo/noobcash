@@ -7,7 +7,7 @@ class BlockchainException(NbcException):
         self.message = message
         self.blockchain = blockchain
         log.error(self.__class__, ' -> ', message)
-        log.warning(self.blockchain.__repr__)
+        log.warning(self.blockchain.__str__())
         super().__init__(self.message)
 
 class InvalidBlockchainException(BlockchainException):
@@ -15,5 +15,5 @@ class InvalidBlockchainException(BlockchainException):
         self.message = message
         self.block = block
         super().__init__(blockchain=blockchain, message=self.message)
-        log.warning('\nThis block is the culprit: ', block.__repr__)
+        log.warning('\nThis block is the culprit: ', block.__str__())
     

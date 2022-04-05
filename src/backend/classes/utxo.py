@@ -16,11 +16,11 @@ class Utxo:
             recipient=self.recipient
         )
     
-    @classmethod
+    @staticmethod
     def from_dict(dictionary:dict):
         return Utxo(
             id=dictionary['id'],
             previous_trans_id=dictionary['previous_trans_id'],
-            amount=dictionary('amount'),
-            recipient=dictionary('recipient')
+            amount=dictionary['amount'],
+            recipient=dictionary['recipient']
         )

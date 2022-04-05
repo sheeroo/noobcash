@@ -1,5 +1,6 @@
 import os
-from time import time
+import threading
+import time
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
@@ -23,29 +24,34 @@ node = None
 
 # get all transactions in the blockchain
 
-@app.route('/transactions/receive', methods=['GET'])
+@app.route('/transactions/receive', methods=['POST'])
 def receive_transaction():
     transaction_dict = request.json
     transaction = Transaction.from_dict(transaction_dict)
 
     node.tx_queue_lock.acquire()
-    if len(node.tx_queue == 0) or transaction.timestamp > node.tx_queue[-1].timestamp:
+    log.info(f'Acquired first lock ({threading.get_ident()})...')
+    if len(node.tx_queue) == 0 or transaction.timestamp > node.tx_queue[-1].timestamp:
+        log.info('Appending to transaction queue...')
         node.tx_queue.append(transaction)
     else:
         # Insert at proper position according to timestamp
         i = 0
+        log.info('Finding correct position for this transaction...')
         while transaction.timestamp > node.tx_queue[i].timestamp:
             i+=1
         node.tx_queue.insert(i, transaction)
     
     node.tx_queue_lock.release()
-
+    log.info(f'Sleeping ({threading.get_ident()})...')
     # Sleep to exploit flask multithreading and locking for other requests capture by threads to insert their transactions
     time.sleep(0.5)
     node.tx_queue_lock.acquire()
+    log.info(f'Acquired second lock ({threading.get_ident()})...')
     new_transaction = node.tx_queue.pop(0)
 
     node.utxo_lock.acquire()
+    log.info(f'Acquired utxo lock ({threading.get_ident()})...')
     try:
         node.validate_transaction(new_transaction)
         response = { 'transaction_outputs': new_transaction.transaction_outputs }

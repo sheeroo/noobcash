@@ -6,7 +6,7 @@ class BlockException(NbcException):
         self.message = message
         self.block = block
         log.error(self.__class__, ' -> ', message)
-        log.warning(block.__repr__)
+        log.warning(block.__str__())
         super().__init__(self.message)
 
 class InvalidBlockException(BlockException):

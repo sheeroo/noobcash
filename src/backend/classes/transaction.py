@@ -22,10 +22,10 @@ class Transaction:
     def __init__(
         self, 
         sender_address, 
-        sender_private_key: str, 
         receiver_address, 
         amount, 
         transaction_inputs,
+        sender_private_key: str = None, 
         transaction_outputs=None, 
         signature=None, 
         transaction_id=None,
@@ -57,10 +57,11 @@ class Transaction:
     def verify_signature(self):
         '''Verification of a received transaction
 		'''
+        log.error(type(self.sender_address))
         key = RSA.importKey(self.sender_address)
-        util = SHA256.new(self.transaction_id)
+        util = SHA256.new(self.trans_uuid)
         if PKCS1_v1_5.new(key).verify(util, self.signature):
-            log.success('Transaction verified: ' + self.__repr__)
+            log.success('Transaction verified: ' + self.__str__())
             return True
         else:
             raise InvalidTransactionException(transaction=self, message='Error in transaction verification')
@@ -90,31 +91,33 @@ class Transaction:
 
 # Everything is serialized except sender's private key
     def to_dict(self):
-        transaction_inputs = list(map(Utxo.to_dict, self.transaction_inputs))
-        transaction_outputs = list(map(Utxo.to_dict, self.transaction_outputs))
+        transaction_inputs = [Utxo.to_dict(ti) for ti in self.transaction_inputs]
+        transaction_outputs = [Utxo.to_dict(to) for to in self.transaction_outputs]
         return dict(
-            sender_address = self.sender_address,
+            sender_address = self.sender_address.decode(),
             receiver_address = self.receiver_address,
             amount = self.amount,
             transaction_id = self.transaction_id,
+            trans_uuid = self.trans_uuid.decode(encoding="ISO-8859-1"),
             transaction_inputs = transaction_inputs,
             transaction_outputs = transaction_outputs,
             signature = self.signature.decode(encoding="ISO-8859-1"),
             timestamp = self.timestamp
         )
 
-    @classmethod
+    @staticmethod
     def from_dict(dictionary: dict):
-        transaction_inputs = list(map(Utxo.from_dict, dictionary['transaction_inputs']))
-        transaction_outputs = list(map(Utxo.from_dict, dictionary['transaction_outputs']))
+        transaction_inputs = [Utxo.from_dict(ti) for ti in dictionary['transaction_inputs']]
+        transaction_outputs = [Utxo.from_dict(to) for to in dictionary['transaction_outputs']]
         return Transaction(
-            sender_address=dictionary['sender_address'],
+            sender_address=dictionary['sender_address'].encode(),
             receiver_address=dictionary['receiver_address'],
             amount=dictionary['amount'],
             transaction_id=dictionary['transaction_id'],
+            trans_uuid = dictionary['trans_uuid'].encode(encoding="ISO-8859-1"),
             transaction_inputs=transaction_inputs,
             transaction_outputs=transaction_outputs,
-            signature = dictionary['signature'].encode(),
+            signature = dictionary['signature'].encode(encoding="ISO-8859-1"),
             timestamp=dictionary['timestamp']
         )
 

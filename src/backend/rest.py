@@ -1,11 +1,14 @@
+from crypt import methods
 import os
 import threading
 import time
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, Blueprint, jsonify, request, render_template
 from flask_cors import CORS
-from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
-from classes.transaction import Transaction
 from utils.debug import log
+from classes.block import Block
+from classes.transaction import Transaction
+from exceptions.block import AlreadyReceivedBlockException, InvalidBlockException
+from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
 
 # from classes.block import Block
 from classes.node import Node
@@ -20,11 +23,45 @@ app = Flask(__name__)
 CORS(app)
 
 # Process memory 
-node = None
+node: Node = None
 
-# get all transactions in the blockchain
+bootstrap = Blueprint('bootstrap', __name__)
+@bootstrap.route('/subscribe', methods=['POST'])
+def subscribe():
+    if not node.is_bootstrap:
+        response = { 'error': True, 'message': "I ain't bootstrap m8" }
+        return jsonify(response), 400
+    else:
+        data = request.json
+    # Get node data from request body heh
+        new_node = Node.from_dict(data)
+        id = node.register_node_to_ring(new_node)
 
-@app.route('/transactions/receive', methods=['POST'])
+        response = { 'id': id, 'state': node.state }
+
+        return jsonify(response), 200
+
+@bootstrap.route('/healthcheck', methods=['POST'])
+def healthcheck():
+    '''If a node calls this he has definetely subscribed so make the transaction
+    '''
+    if not node.is_bootstrap:
+        response = { 'error': True, 'message': "I ain't bootstrap m8" }
+        return jsonify(response), 400
+    else:
+        data = request.json
+    # Get node data from request body heh
+        new_node = Node.from_dict(data)
+
+        receiver_pub = new_node.wallet.public_key.decode()
+
+        node.create_transaction(receiver_pub, 100)
+
+        response = { 'error': False }
+        return jsonify(response), 200
+
+transaction = Blueprint('transactions', __name__, url_prefix='/transaction')
+@transaction.route('/receive', methods=['POST'])
 def receive_transaction():
     transaction_dict = request.json
     transaction = Transaction.from_dict(transaction_dict)
@@ -54,35 +91,14 @@ def receive_transaction():
     log.info(f'Acquired utxo lock ({threading.get_ident()})...')
     try:
         node.validate_transaction(new_transaction)
-        response = { 'transaction_outputs': new_transaction.transaction_outputs }
+        node.add_transaction_to_block(new_transaction)
+        response = { 'transaction_outputs': [u.to_dict() for u in new_transaction.transaction_outputs] }
         return jsonify(response), 200
     except InvalidTransactionException as e:
         response = { 'error': True, 'message': e.message }
         return jsonify(response), 400
 
-
-@app.route('/subscribe', methods=['POST'])
-def subscribe():
-    if not node.is_bootstrap:
-        response = { 'error': True, 'message': "I ain't bootstrap m8" }
-        return jsonify(response), 400
-    else:
-        data = request.json
-    # Get node data from request body heh
-        new_node = Node.from_dict(data)
-        id = node.register_node_to_ring(new_node)
-
-        response = { 'id': id }
-        '''
-            Need to implement the transaction to give initial 100 NBC to this node!!
-        '''
-        receiver_pub = new_node.wallet.public_key.decode()
-
-        node.create_transaction(receiver_pub, 100)
-
-        return jsonify(response), 200
-
-@app.route('/transaction/create', methods=['POST'])
+@transaction.route('/create', methods=['POST'])
 def create_transaction():
     data=request.json()
     receiver = data['receiver']
@@ -99,15 +115,59 @@ def create_transaction():
         log.error(response)
         return jsonify(response), 400
 
-@app.route('/debug/node', methods=['GET'])
+block = Blueprint('/block', __name__, url_prefix='/block')
+@block.route('/receive', methods=['POST'])
+def receive_block():
+    # Stop mining
+    node.cancel_mining = True
+
+    block_dict = request.json
+    block = Block.from_dict(block_dict)
+    last_block: Block = None
+    # Check if block's transactions are already received in another block
+    block_transactions = [t.transaction_id for t in block.transactions]
+    try:
+        with node.tx_log_lock:
+        # If same transactions are already received
+            for t in block_transactions:
+                if t in node.tx_log[::-1]:
+                    raise AlreadyReceivedBlockException(block=block)
+            
+            node.tx_log.extend(block_transactions)
+            # Wait while concensus is running
+            while node.resolving_conflict:
+                pass
+
+            with node.blockchain_lock:
+                last_block = node.blockchain.last_block
+                if block.index in [b.index for b in node.blockchain.chain]:
+                    raise AlreadyReceivedBlockException(block=block)
+            
+        # Here only if block is not already broadcasted from another minder
+        block.validate_block(last_block)
+        node.blockchain.chain.append(block)
+        response = { 'error': False, 'message': 'Block accepted' }
+        return jsonify(response), 200
+    except AlreadyReceivedBlockException as e:
+        response = { 'error': True, 'message': e.message }
+        return jsonify(response), 200
+    except InvalidBlockException as ie:
+        response = { 'error': True, 'message': ie.message }
+        return jsonify(response), 200
+
+debug = Blueprint('debug', __name__, url_prefix='/debug')
+@debug.route('/node', methods=['GET'])
 def print_node():
-    log.info(node)
     return jsonify(node.to_dict()), 200
 
-@app.route('/debug/blockchain', methods=['GET'])
+@debug.route('/blockchain', methods=['GET'])
 def print_blockchain():
-    log.info(node.blockchain)
     return jsonify(node.blockchain.to_dict()), 200
+
+app.register_blueprint(bootstrap)
+app.register_blueprint(transaction)
+app.register_blueprint(block)
+app.register_blueprint(debug)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -122,22 +182,28 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
     ip = args.ipaddress
-    
-    if not node:
+
+    def init(ip, port, bootstrap_ip, bootstrap_port):
+        global node
+        if not node:
         # Create a new node
-        node = Node(ip=ip, port=port)
-        log.info(f'Starting node -> {ip}:{port}')
+            node = Node(ip=ip, port=port)
+            log.info(f'Starting node -> {ip}:{port}')
 
-        if ip == bootstrap_ip and port == bootstrap_port:
-            # You are the bootstrap node
-            node.id = 0
-            # Create genesis block
-            node.genesis_block()
-            log.info('You are the bootstrap node')
-            log.info(node)
-            log.info(node.blockchain.last_block.__str__(), header='Genesis block')
-        else:
-            # Try to subscribe to bootstrap node
-            node.subscribe(bootstrap_ip=bootstrap_ip, bootstrap_port=bootstrap_port)
-
+            if ip == bootstrap_ip and port == bootstrap_port:
+                # You are the bootstrap node
+                node.id = 0
+                # Create genesis block
+                node.genesis_block()
+                # Add bootstrap to ring
+                # node.ring.append(node)
+                log.info('You are the bootstrap node')
+                log.info(node)
+                log.info(node.blockchain.last_block.__str__(), header='Genesis block')
+            else:
+                # Try to subscribe to bootstrap node
+                node.subscribe(bootstrap_ip=bootstrap_ip, bootstrap_port=bootstrap_port)
+    
+    thread=threading.Thread(target=init, args=(ip, port, bootstrap_ip, bootstrap_port))
+    thread.start()
     app.run(host='127.0.0.1', port=port, threaded=True)

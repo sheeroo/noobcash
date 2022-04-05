@@ -17,22 +17,20 @@ from .utxo import Utxo
 class Node:
 	def __init__(self, ip, port, wallet=None):
 		self.blockchain = Blockchain()
+		self.blockchain_lock = threading.Lock()
 		self.wallet = wallet or self.create_wallet()
 		self.ring = []
 		self.utxo: list(Utxo) = []
 		self.utxo_lock = threading.Lock()
 		self.port = port
 		self.ip = ip
-		self.cancel_mining = False
 		self.id = None
 		self.tx_queue = []
 		self.tx_queue_lock = threading.Lock()
 		self.tx_log = []
 		self.tx_log_lock = threading.Lock()
-		#self.id to be set later
-		#self.current_id_count
-		#self.NBCs
-		#self.wallet
+		self.cancel_mining = False
+		self.resolving_conflict = False
 
 	@property
 	def is_bootstrap(self):
@@ -82,8 +80,15 @@ class Node:
 				json=self.to_dict()
 			)
 			response_data = response.json()
+			log.info(response_data)
 			self.id = response_data['id']
+			self.set_state(response_data['state'])
 			log.success(f'Registered node {self.id} to ring.')
+
+			requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/healthcheck', 
+				json=self.to_dict()
+			)
+			log.success('Giving life signs after successful registration...')
 		except requests.HTTPError as errorh:
 			log.error(f'Oops, {errorh}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {errorh}')
@@ -116,10 +121,12 @@ class Node:
 
 	def broadcast_transaction(self, transaction: Transaction):
 		responses = []
-		helper.broadcast(self.ring, '/transactions/receive', transaction.to_dict(), responses)
+		log.info('Broadcasting the transaction...')
+		helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), responses)
 
 	def broadcast_block(self, block: Block):
 		responses = []
+		log.info('Broadcasting the block...')
 		helper.broadcast(self.ring, '/block/receive', block.to_dict(), responses)
 
 	def validate_transaction(self, transaction: Transaction):
@@ -134,8 +141,8 @@ class Node:
 			utxos_used = []
 			for trans_in in transaction.transaction_inputs:
 				before = len(utxos_used) #length of utxos_used before iterating utxos of node
-				for utxo in self.utxo:
-					if utxo.id == trans_in.id and utxo.recipient == transaction.sender_address:
+				for i, utxo in enumerate(self.utxo):
+					if utxo.id == trans_in.id and utxo.recipient == transaction.sender_address.decode():
 						# utxo is used for this transaction
 						utxos_used.append(utxo.id)
 				after = len(utxos_used) #length of utxos_used after iterating utxos of node
@@ -186,11 +193,16 @@ class Node:
 			amount=amount, 
 			transaction_inputs=transaction_inp
 		)
+		try:
+		# Validate transaction
+			self.validate_transaction(transaction)
 		# Broadcast transaction
-		self.broadcast_transaction(transaction)
+			self.broadcast_transaction(transaction)
 
-		self.add_transaction_to_block(transaction)
-		return transaction
+			self.add_transaction_to_block(transaction)
+			return transaction
+		except InvalidTransactionException:
+			raise
 
 	def add_transaction_to_block(self, transaction):
 		'''Add a transaction to block or trigger mining
@@ -199,11 +211,12 @@ class Node:
 		'''
 		capacity = int(os.getenv('MAX_CAPACITY'))
 		last_block = self.blockchain.last_block
+		if last_block.contains_transaction(transaction):
+			return
 		if len(last_block.transactions) < capacity and last_block.index != 0:
 			last_block.add_transaction(transaction)
 		else:
 			self.mine_block(last_block, transaction)
-
 
 	# MINING
 	def mine_block(self, previous_block, transaction):
@@ -213,12 +226,13 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		log.info('Mining...')
+		log.info(f'Previous block: {previous_block}')
 		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
 		nonce = 0
 		new_block = None 
 		while True: 
 			if self.cancel_mining:
-				log.info('Received block. Stoping...')
+				log.info('Received block. Stopping...')
 				return
 			new_block = Block(
 				index=previous_block.index + 1,
@@ -274,13 +288,36 @@ class Node:
 		
 		return False
 
+	@property
+	def state(self) -> dict:
+		utxo = [u.to_dict() for u in self.utxo]
+		tx_queue = [t.to_dict() for t in self.tx_queue]
+		type(self.tx_log)
+		return dict(
+			utxo=utxo,
+			blockchain=self.blockchain.to_dict(),
+			tx_queue=tx_queue,
+			tx_log=self.tx_log
+		)
+	
+	def set_state(self, dictionary: dict) -> None:
+		utxo = [Utxo.from_dict(u) for u in dictionary['utxo']]
+		tx_queue = [Transaction.from_dict(t) for t in dictionary['tx_queue']]
+		blockchain = Blockchain.from_dict(dictionary['blockchain'])
+		# Setting state
+		self.utxo = utxo
+		self.blockchain = blockchain
+		self.tx_queue = tx_queue
+		self.tx_log = dictionary['tx_log']
+
 	def to_dict(self):
 		ring=[node.to_dict() for node in self.ring]
 		return dict(
 			ip=self.ip,
 			port=self.port,
 			public_key=self.wallet.public_key.decode(),
-			ring=ring
+			ring=ring,
+			state=self.state
 		)
 	
 	@staticmethod
@@ -293,4 +330,5 @@ class Node:
 		)
 
 	def __str__(self):
+		log.info(type(self.to_dict()))
 		return json.dumps(self.to_dict(), indent=4)

@@ -82,7 +82,7 @@ class Transaction:
         sender_utxo = Utxo(
             previous_trans_id=self.transaction_id,
             amount=total - self.amount, #RESTA
-            recipient=self.sender_address
+            recipient=self.sender_address.decode()
         )
         transaction_outputs = [receiver_utxo, sender_utxo]
         self.transaction_outputs = transaction_outputs

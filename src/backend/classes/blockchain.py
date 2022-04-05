@@ -57,7 +57,7 @@ class Blockchain:
             raise InvalidBlockchainException(blockchain=self, block=e.block)
 
     @property
-    def last_block(self):
+    def last_block(self) -> Block:
         '''Get last block of chain
         Returns:
             Block: last block of chain

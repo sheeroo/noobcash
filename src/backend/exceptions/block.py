@@ -13,4 +13,7 @@ class InvalidBlockException(BlockException):
     def __init__(self, block, message="This block is invalid"):
         self.message = message
         super().__init__(block, self.message)
-    
+
+class AlreadyReceivedBlockException(BlockException):
+    def __init__(self, block, message="This block has already been received"):
+        super().__init__(block, message)

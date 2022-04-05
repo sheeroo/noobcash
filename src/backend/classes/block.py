@@ -44,11 +44,21 @@ class Block:
         '''
         # Check if current_hash is correct
         if self.current_hash != self.my_hash():
-            raise InvalidBlockException(self, block=self, message="This block has invalid hash")
+            log.error(f'{self.current_hash} != {self.my_hash()}')
+            log.error(f'Previous hash: {self.previous_hash}')
+            log.error(f'Nonce: {self.nonce}')
+            log.error(f'Transactions: {sum(int(t.transaction_id, 16) for t in self.transactions)}')
+            log.warning(f'Transactions: {sum(int(t.transaction_id, 16) for t in self.transactions)}')
+            log.error(f'Timestamp: {self.timestamp}')
+            raise InvalidBlockException(block=self, message="This block has invalid hash")
         # Check if previous_hash is equal to previous block's hash
         elif self.previous_hash != previous_block.current_hash:
-            raise InvalidBlockException(self, block=self, message="This block has invalid previous hash")
+            raise InvalidBlockException(block=self, message="This block has invalid previous hash")
         return True
+
+    def contains_transaction(self, transaction):
+        transaction_ids = [t.transaction_id for t in self.transactions]
+        return transaction.transaction_id in transaction_ids
 
     def to_dict(self):
         transactions = [t.to_dict() for t in self.transactions]
@@ -64,12 +74,14 @@ class Block:
 
     @staticmethod
     def from_dict(blockDict: dict):
+        transactions = [Transaction.from_dict(t) for t in blockDict['transactions']]
         return Block(
             index=blockDict['index'],
             nonce=blockDict['nonce'],
             previous_hash=blockDict['previous_hash'],
-            transactions=blockDict['transactions'],
-            current_hash=blockDict['current_hash']
+            curr_transactions=transactions,
+            current_hash=blockDict['current_hash'],
+            timestamp=blockDict['timestamp']
         )
 
     def __str__(self):

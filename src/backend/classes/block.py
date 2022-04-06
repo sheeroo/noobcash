@@ -47,6 +47,8 @@ class Block:
             raise InvalidBlockException(block=self, message="This block has invalid hash")
         # Check if previous_hash is equal to previous block's hash
         elif self.previous_hash != previous_block.current_hash:
+            log.error(self.previous_hash, '!=', previous_block.current_hash)
+            log.error('PreviousBlock', previous_block)
             raise InvalidBlockException(block=self, message="This block has invalid previous hash")
         return True
 

@@ -24,12 +24,12 @@ class Node:
 		self.utxo_lock = threading.Lock()
 		self.port = port
 		self.ip = ip
-		self.id = None
+		self.id: int = None
 		self.tx_queue = []
 		self.tx_queue_lock = threading.Lock()
 		self.tx_log = []
 		self.tx_log_lock = threading.Lock()
-		self.cancel_mining = False
+		self.mining = False
 		self.resolving_conflict = False
 
 	@property
@@ -80,15 +80,14 @@ class Node:
 				json=self.to_dict()
 			)
 			response_data = response.json()
-			log.info(response_data)
 			self.id = response_data['id']
 			self.set_state(response_data['state'])
 			log.success(f'Registered node {self.id} to ring.')
 
+			log.info('Giving life signs after successful registration...')
 			requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/healthcheck', 
 				json=self.to_dict()
 			)
-			log.success('Giving life signs after successful registration...')
 		except requests.HTTPError as errorh:
 			log.error(f'Oops, {errorh}')
 			raise Exception(f'Cannot subscribe to bootstrap node due to {errorh}')
@@ -104,6 +103,11 @@ class Node:
 		node.id = next_id
 		self.ring.append(node)
 		log.success(f'Registered node {Decoration.REVERSED}{node.id}{Decoration.CLEAR} to ring.')
+		
+		all_nodes = int(os.getenv('NODES'))
+		if len(self.ring) == all_nodes:
+			log.info('Broadcasting ring...')
+			self.broadcast_ring()
 		return next_id
 
 	''' Wallet is being created in init '''
@@ -111,7 +115,9 @@ class Node:
 		#create a wallet for this node, with a public key and a private key
 		return Wallet()
 
-	def wallet_balance(self, public_key):
+	def wallet_balance(self, public_key: str = None):
+		if not public_key:
+			public_key = self.wallet.public_key.decode()
 		amount = 0
 		for utxo in self.utxo:
 			if utxo.recipient == public_key:
@@ -121,20 +127,23 @@ class Node:
 
 	def broadcast_transaction(self, transaction: Transaction):
 		log.info('Broadcasting the transaction...')
-		responses=helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), me=self, wait=True)
-		log.info([r.text for r in responses], header='RESPONSES')
+		helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), me=self)
 
 	def broadcast_block(self, block: Block):
 		log.info('Broadcasting the block...')
-		responses=helper.broadcast(self.ring, '/block/receive', block.to_dict(), me=self)
+		helper.broadcast(self.ring, '/block/receive', block.to_dict(), me=self)
+
+	def broadcast_ring(self):
+		log.info('Broadcasting ring...')
+		helper.broadcast(self.ring, '/ring/receive', { 'ring': [r.to_dict() for r in self.ring] }, me=self)
 
 	def validate_transaction(self, transaction: Transaction):
 		#use of signature and NBCs balance
-		log.info(f'Validating transaction: {transaction.__str__()}...')
+		log.info(f'Validating transaction: {transaction.transaction_id}...')
 		try:
 			transaction.verify_signature()
 		except InvalidTransactionException as e:
-			raise InvalidTransactionException(transaction=transaction, message="Transaction verification failed!")
+			raise InvalidTransactionException(transaction=transaction, message="Transaction validation failed!")
 		
 		try:
 			utxos_used = []
@@ -166,7 +175,6 @@ class Node:
 			raise e
 
 	def create_transaction(self, recipient, amount):
-
 		if amount <= 0:
 			raise InvalidTransactionException('You must send something dumdum!')
 		if self.wallet.public_key.decode() == recipient:
@@ -195,6 +203,7 @@ class Node:
 			amount=amount, 
 			transaction_inputs=transaction_inp
 		)
+		log.info(f'Creating transaction with id {transaction.transaction_id} and {amount} NBC')
 		try:
 		# Validate transaction
 			self.validate_transaction(transaction)
@@ -228,11 +237,11 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		log.info('Mining...')
-		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
+		self.mining = True # Re initialize cancel mining to False to allow mining
 		nonce = 0
 		new_block = None 
 		while True: 
-			if self.cancel_mining:
+			if not self.mining:
 				log.info('Received block. Stopping...')
 				return
 			new_block = Block(
@@ -249,6 +258,7 @@ class Node:
 				self.broadcast_block(new_block)
 				break
 			nonce += 1
+		self.mining = False
 
 	@staticmethod
 	def valid_proof(block_hash):
@@ -269,25 +279,30 @@ class Node:
 		Args:
 			nodes(list(Blockchain)): Returned data from requested resolve
 		'''
+		self.resolving_conflict = True
 		checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
-		result = []
-		helper.broadcast(self.ring, '/blockchain/get', checkpoint_dict, result)
+		
+		results = helper.broadcast(self.ring, '/state/get', checkpoint_dict, me=self, wait=True)
 
 
 		max_length = len(self.blockchain.chain)
+		accepted_state = None
 
-		for blockchain in result:
-			
+		for result in results:
+			state = result.json()
+			blockchain = Blockchain.from_dict(state['blockchain'])
 			chain_length = len(blockchain.chain)
 
 			if chain_length > max_length:
 				max_length = chain_length
-				resolved_chain = blockchain.chain
+				accepted_state = state
 			
-		if resolved_chain:
-			return resolved_chain
+		if accepted_state:
+			self.set_state(accepted_state)
+		# else I have the biggest chain
+		self.resolving_conflict = False
 		
-		return False
+		return None
 
 	@property
 	def state(self) -> dict:
@@ -315,23 +330,25 @@ class Node:
 		self.tx_log = dictionary['tx_log']
 
 	def to_dict(self):
-		ring=[node.to_dict() for node in self.ring]
+		# ring=[node.to_dict() for node in self.ring]
 		return dict(
+			id=self.id,
 			ip=self.ip,
 			port=self.port,
 			public_key=self.wallet.public_key.decode(),
-			ring=ring,
 			state=self.state
 		)
 	
 	@staticmethod
 	def from_dict(nodeDict: dict):
 		wallet = Wallet(public_key=nodeDict['public_key'].encode(), private_key='')
-		return Node(
+		node = Node(
 			ip=nodeDict['ip'],
 			port=nodeDict['port'],
 			wallet=wallet
 		)
+		node.id = nodeDict['id']
+		return node
 
 	def __str__(self):
 		return json.dumps(self.to_dict(), indent=4)

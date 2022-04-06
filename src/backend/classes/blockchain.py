@@ -110,7 +110,7 @@ class Blockchain:
     @staticmethod
     def from_dict(dictionary: dict):
         result_chain = [Block.from_dict(b) for b in dictionary['chain']]
-        log.info(dictionary, header='Blockchain received dict: ')
+        # log.info(dictionary, header='Blockchain received dict: ')
         return Blockchain(
 			chain=result_chain
 		)

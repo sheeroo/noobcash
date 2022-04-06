@@ -60,7 +60,7 @@ class Transaction:
         key = RSA.importKey(self.sender_address)
         util = SHA256.new(self.trans_uuid)
         if PKCS1_v1_5.new(key).verify(util, self.signature):
-            log.success('Transaction verified: ' + self.__str__())
+            log.success('Transaction verified: ' + self.transaction_id)
             return True
         else:
             raise InvalidTransactionException(transaction=self, message='Error in transaction verification')

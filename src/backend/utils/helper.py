@@ -15,8 +15,8 @@ def broadcast(ring, url_action, data, me = None, wait = False):
 		threads=[]
 		responses=[]
 		def call_func(node, url_action, data):
-			log.info(f'Sending {data} to node {node.ip}:{node.port}{url_action}...')
-			response = requests.post(f'http://{node.ip}:{node.port}{url_action}', json=data, timeout=2)
+			log.info(f'Sending data to node {node.ip}:{node.port}{url_action}...')
+			response = requests.post(f'http://{node.ip}:{node.port}{url_action}', json=data, timeout=10)
 			log.info(f'Node {node.ip}:{node.port} responded with {response.text}...')
 			responses.append(response)
 		for node in ring:

@@ -1,7 +1,9 @@
 from crypt import methods
+from email import message
 import os
 import threading
 import time
+from urllib import response
 from flask import Flask, Blueprint, jsonify, request, render_template
 from flask_cors import CORS
 from utils.debug import log
@@ -66,30 +68,38 @@ transaction = Blueprint('transactions', __name__, url_prefix='/transaction')
 def receive_transaction():
     transaction_dict = request.json
     transaction = Transaction.from_dict(transaction_dict)
+    log.info(f'Receiving transaction {transaction.transaction_id}...')
+
+    while node.resolving_conflict:
+        pass
 
     node.tx_queue_lock.acquire()
     log.info(f'Acquired first lock ({threading.get_ident()})...')
     if len(node.tx_queue) == 0 or transaction.timestamp > node.tx_queue[-1].timestamp:
-        log.info('Appending to transaction queue...')
+        # log.info('Appending to transaction queue...')
         node.tx_queue.append(transaction)
     else:
         # Insert at proper position according to timestamp
         i = 0
-        log.info('Finding correct position for this transaction...')
+        # log.info('Finding correct position for this transaction...')
         while transaction.timestamp > node.tx_queue[i].timestamp:
             i+=1
         node.tx_queue.insert(i, transaction)
     
     node.tx_queue_lock.release()
-    log.info(f'Sleeping ({threading.get_ident()})...')
+    # log.info(f'Sleeping ({threading.get_ident()})...')
     # Sleep to exploit flask multithreading and locking for other requests capture by threads to insert their transactions
     time.sleep(0.5)
+    # Block adding new transactions while mining but do not hold the lock for sorting newly received transactions
+    while node.mining:
+        pass
+
     with node.tx_queue_lock:
-        log.info(f'Acquired second lock ({threading.get_ident()})...')
+        # log.info(f'Acquired second lock ({threading.get_ident()})...')
         new_transaction = node.tx_queue.pop(0)
 
         with node.utxo_lock:
-            log.info(f'Acquired utxo lock ({threading.get_ident()})...')
+            # log.info(f'Acquired utxo lock ({threading.get_ident()})...')
             try:
                 node.validate_transaction(new_transaction)
                 node.add_transaction_to_block(new_transaction)
@@ -101,30 +111,43 @@ def receive_transaction():
 
 @transaction.route('/create', methods=['POST'])
 def create_transaction():
-    data=request.json()
-    receiver = data['receiver']
+    data=request.json
+    receiver_id = data['receiver']
     amount = data['amount']
-
+    receiver = None
     try:
-        node.create_transaction(receiver, amount)
+        for r in node.ring:
+            if r.id == receiver_id:
+                receiver = r.wallet.public_key.decode()
+        if receiver == None:
+            raise InvalidTransactionException(message='No node with such id found')
+        created_transaction = node.create_transaction(receiver, amount)
+
+        response = { 'error': False, 'message': f'Transaction created with id {created_transaction.transaction_id}'}
+        return jsonify(response), 200
     except InsufficientFundsException as ife:
         response = { 'error': True, 'message': ife.message }
         log.error(response)
         return jsonify(response), 400
-    except Exception as e:
+    except InvalidTransactionException as e:
         response = { 'error': True, 'message': e.message }
-        log.error(response)
+        return jsonify(response), 400
+    except Exception as e:
+        response = { 'error': True, 'message': 'An unknown error occured' }
+        log.error(e)
         return jsonify(response), 400
 
 block = Blueprint('/block', __name__, url_prefix='/block')
 @block.route('/receive', methods=['POST'])
 def receive_block():
     # Stop mining
-    node.cancel_mining = True
+    node.mining = False
 
     block_dict = request.json
     block = Block.from_dict(block_dict)
     last_block: Block = None
+
+    log.info(f'Receiving block {block.index}...')
     # Check if block's transactions are already received in another block
     block_transactions = [t.transaction_id for t in block.transactions]
     try:
@@ -153,8 +176,30 @@ def receive_block():
         response = { 'error': True, 'message': e.message }
         return jsonify(response), 200
     except InvalidBlockException as ie:
+        # If block is invalid then resolve conflict
+        if ie.message == "This block has invalid previous hash":
+            node.resolve_conflict()
         response = { 'error': True, 'message': ie.message }
         return jsonify(response), 200
+
+ring = Blueprint('/ring', __name__, url_prefix='/ring')
+@ring.route('/receive', methods=['POST'])
+def receive_ring():
+    req_json = request.json
+    ring = [Node.from_dict(r) for r in req_json['ring']]
+    node.ring = ring
+    response = {'error': False, 'message': 'Received ring'}
+    return jsonify(response), 200
+
+@app.route('/state/get', methods=['POST'])
+def get_state():
+    return jsonify(node.state), 200
+
+@app.route('/balance', methods=['GET'])
+def get_balance():
+    balance = node.wallet_balance()
+    response = { 'balance': balance }
+    return jsonify(response), 200
 
 debug = Blueprint('debug', __name__, url_prefix='/debug')
 @debug.route('/node', methods=['GET'])
@@ -167,6 +212,7 @@ def print_blockchain():
 
 app.register_blueprint(bootstrap)
 app.register_blueprint(transaction)
+app.register_blueprint(ring)
 app.register_blueprint(block)
 app.register_blueprint(debug)
 

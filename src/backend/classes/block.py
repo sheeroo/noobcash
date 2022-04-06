@@ -44,12 +44,6 @@ class Block:
         '''
         # Check if current_hash is correct
         if self.current_hash != self.my_hash():
-            log.error(f'{self.current_hash} != {self.my_hash()}')
-            log.error(f'Previous hash: {self.previous_hash}')
-            log.error(f'Nonce: {self.nonce}')
-            log.error(f'Transactions: {sum(int(t.transaction_id, 16) for t in self.transactions)}')
-            log.warning(f'Transactions: {sum(int(t.transaction_id, 16) for t in self.transactions)}')
-            log.error(f'Timestamp: {self.timestamp}')
             raise InvalidBlockException(block=self, message="This block has invalid hash")
         # Check if previous_hash is equal to previous block's hash
         elif self.previous_hash != previous_block.current_hash:

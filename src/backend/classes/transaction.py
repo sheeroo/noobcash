@@ -57,7 +57,6 @@ class Transaction:
     def verify_signature(self):
         '''Verification of a received transaction
 		'''
-        log.error(type(self.sender_address))
         key = RSA.importKey(self.sender_address)
         util = SHA256.new(self.trans_uuid)
         if PKCS1_v1_5.new(key).verify(util, self.signature):

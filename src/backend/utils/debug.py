@@ -1,3 +1,5 @@
+from datetime import datetime
+
 class Colors:
     SUCCESS = '\033[92m'
     WARNING = '\033[93m'
@@ -21,26 +23,30 @@ class Decoration:
 class log:
     @staticmethod
     def info(*args, header: str = ''):
+        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
         print(Decoration.UNDERLINE, header)
         Decoration.clear()
-        print(Colors.INFO, *args)
+        print('[', now, ']', Colors.INFO, *args)
         Colors.clear()
         Decoration.clear()
 
     @staticmethod
     def success(*args):
-        print(Colors.SUCCESS, *args)
+        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
+        print('[', now, ']', Colors.SUCCESS, *args)
         Colors.clear()
         Decoration.clear()
 
     @staticmethod
     def warning(*args):
-        print(Colors.WARNING, *args)
+        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
+        print('[', now, ']', Colors.WARNING, *args)
         Colors.clear()
         Decoration.clear()
 
     @staticmethod
     def error(*args):
-        print(Colors.ERROR, *args)
+        now = datetime.now().strftime("%d/%m/%Y %H:%M:%S.%f")[:-3]
+        print('[', now, ']', Colors.ERROR, *args)
         Colors.clear()
         Decoration.clear()

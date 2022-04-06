@@ -9,6 +9,7 @@ from classes.block import Block
 from classes.transaction import Transaction
 from exceptions.block import AlreadyReceivedBlockException, InvalidBlockException
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
+import copy
 
 # from classes.block import Block
 from classes.node import Node
@@ -83,20 +84,20 @@ def receive_transaction():
     log.info(f'Sleeping ({threading.get_ident()})...')
     # Sleep to exploit flask multithreading and locking for other requests capture by threads to insert their transactions
     time.sleep(0.5)
-    node.tx_queue_lock.acquire()
-    log.info(f'Acquired second lock ({threading.get_ident()})...')
-    new_transaction = node.tx_queue.pop(0)
+    with node.tx_queue_lock:
+        log.info(f'Acquired second lock ({threading.get_ident()})...')
+        new_transaction = node.tx_queue.pop(0)
 
-    node.utxo_lock.acquire()
-    log.info(f'Acquired utxo lock ({threading.get_ident()})...')
-    try:
-        node.validate_transaction(new_transaction)
-        node.add_transaction_to_block(new_transaction)
-        response = { 'transaction_outputs': [u.to_dict() for u in new_transaction.transaction_outputs] }
-        return jsonify(response), 200
-    except InvalidTransactionException as e:
-        response = { 'error': True, 'message': e.message }
-        return jsonify(response), 400
+        with node.utxo_lock:
+            log.info(f'Acquired utxo lock ({threading.get_ident()})...')
+            try:
+                node.validate_transaction(new_transaction)
+                node.add_transaction_to_block(new_transaction)
+                response = { 'error': False, 'message': f'Transaction {new_transaction.transaction_id} received' }
+                return jsonify(response), 200
+            except InvalidTransactionException as e:
+                response = { 'error': True, 'message': e.message }
+                return jsonify(response), 400
 
 @transaction.route('/create', methods=['POST'])
 def create_transaction():
@@ -131,7 +132,7 @@ def receive_block():
         # If same transactions are already received
             for t in block_transactions:
                 if t in node.tx_log[::-1]:
-                    raise AlreadyReceivedBlockException(block=block)
+                    raise AlreadyReceivedBlockException(block, message='Block transactions already in log')
             
             node.tx_log.extend(block_transactions)
             # Wait while concensus is running
@@ -141,7 +142,7 @@ def receive_block():
             with node.blockchain_lock:
                 last_block = node.blockchain.last_block
                 if block.index in [b.index for b in node.blockchain.chain]:
-                    raise AlreadyReceivedBlockException(block=block)
+                    raise AlreadyReceivedBlockException(block, message='Block index already in chain')
             
         # Here only if block is not already broadcasted from another minder
         block.validate_block(last_block)
@@ -196,7 +197,9 @@ if __name__ == '__main__':
                 # Create genesis block
                 node.genesis_block()
                 # Add bootstrap to ring
-                # node.ring.append(node)
+                node_copy = Node(ip=node.ip, port=node.port, wallet=node.wallet) # Do not take ring of current node object
+                node_copy.id = node.id
+                node.ring.append(node_copy)
                 log.info('You are the bootstrap node')
                 log.info(node)
                 log.info(node.blockchain.last_block.__str__(), header='Genesis block')

@@ -120,14 +120,13 @@ class Node:
 		return amount
 
 	def broadcast_transaction(self, transaction: Transaction):
-		responses = []
 		log.info('Broadcasting the transaction...')
-		helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), responses)
+		responses=helper.broadcast(self.ring, '/transaction/receive', transaction.to_dict(), me=self, wait=True)
+		log.info([r.text for r in responses], header='RESPONSES')
 
 	def broadcast_block(self, block: Block):
-		responses = []
 		log.info('Broadcasting the block...')
-		helper.broadcast(self.ring, '/block/receive', block.to_dict(), responses)
+		responses=helper.broadcast(self.ring, '/block/receive', block.to_dict(), me=self)
 
 	def validate_transaction(self, transaction: Transaction):
 		#use of signature and NBCs balance
@@ -151,7 +150,10 @@ class Node:
 				if after == before:
 					raise InvalidTransactionException(transaction=transaction, message="Transaction input utxos not found!")
 			# Reaching here means funds are found in utxos so now we have to produce transaction's outputs
-			transaction_outputs = transaction.calculate_outputs()
+			if transaction.transaction_outputs == []:
+				transaction_outputs = transaction.calculate_outputs()
+			else:
+				transaction_outputs = transaction.transaction_outputs
 
 			# Remove utxos used
 			self.utxo = [utxo for utxo in self.utxo if utxo.id not in utxos_used]
@@ -226,7 +228,6 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		log.info('Mining...')
-		log.info(f'Previous block: {previous_block}')
 		self.cancel_mining = False # Re initialize cancel mining to False to allow mining
 		nonce = 0
 		new_block = None 
@@ -241,13 +242,13 @@ class Node:
 				curr_transactions=[transaction]
 			)
 			if Node.valid_proof(new_block.current_hash):
+				log.info('Mined!')
 				# Add it to chain
 				self.blockchain.chain.append(new_block)
 				#Broadcast the block
 				self.broadcast_block(new_block)
 				break
 			nonce += 1
-		log.info('Mined!')
 
 	@staticmethod
 	def valid_proof(block_hash):
@@ -292,20 +293,23 @@ class Node:
 	def state(self) -> dict:
 		utxo = [u.to_dict() for u in self.utxo]
 		tx_queue = [t.to_dict() for t in self.tx_queue]
-		type(self.tx_log)
+		ring = [r.to_dict() for r in self.ring]
 		return dict(
 			utxo=utxo,
 			blockchain=self.blockchain.to_dict(),
+			ring=ring,
 			tx_queue=tx_queue,
 			tx_log=self.tx_log
 		)
 	
 	def set_state(self, dictionary: dict) -> None:
 		utxo = [Utxo.from_dict(u) for u in dictionary['utxo']]
+		ring = [Node.from_dict(n) for n in dictionary['ring']]
 		tx_queue = [Transaction.from_dict(t) for t in dictionary['tx_queue']]
 		blockchain = Blockchain.from_dict(dictionary['blockchain'])
 		# Setting state
 		self.utxo = utxo
+		self.ring = ring
 		self.blockchain = blockchain
 		self.tx_queue = tx_queue
 		self.tx_log = dictionary['tx_log']
@@ -330,5 +334,4 @@ class Node:
 		)
 
 	def __str__(self):
-		log.info(type(self.to_dict()))
 		return json.dumps(self.to_dict(), indent=4)

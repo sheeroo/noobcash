@@ -35,7 +35,7 @@ export const newTransaction = async ({ receiver, amount }) => {
         const { data } = await instance.post('/transaction/create', { receiver, amount });
         return data;
     } catch (error) {
-        throw error;
+        throw error.response;
     }
 }
 
@@ -51,6 +51,21 @@ export const getRing = async () => {
             return { address: item["public_key"], id: item.id, port: item.port };
         });
         return formattedArray;
+    } catch (error) {
+        console.error('Ring Error', error);
+        throw error;
+    }
+}
+
+export const transactionLog = async () => {
+    try {
+        const ip = getIP();
+        const instance = axios.create({
+            baseURL: `http://${ip}`,
+            timeout: 5000
+        });
+        const { data } = await instance.get('/transaction/view');
+        return data;
     } catch (error) {
         console.error('Ring Error', error);
         throw error;

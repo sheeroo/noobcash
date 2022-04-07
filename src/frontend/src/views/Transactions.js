@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Stack, Grid, Typography,  } from '@mui/material';
+import { useEffect, useState, useContext } from 'react';
+import { UserContext } from 'context';
+import { Stack, Grid, Typography, Grow  } from '@mui/material';
 import Colors from 'assets/colors';
 import { Box } from '@mui/material';
+import socketio from 'socket.io-client';
+import coin from 'assets/images/coin.png';
+
+const ENDPOINT = 'http://192.168.0.96:5000'
 
 const FunnyStack = ({ children, sx, ...props }) => (
     <Stack sx={{ p: 2, borderRadius: 2, border: 5, background: 'white', ...sx }} {...props}>
@@ -9,46 +14,49 @@ const FunnyStack = ({ children, sx, ...props }) => (
     </Stack>
 )
 
-const Transaction = ({ recipient, reciever, amount }) => {
+const Transaction = ({ sender, receiver, amount }) => {
     return (
         <>
             <Stack direction="row" justifyContent="space-around">
                 <Typography variant="h1">
-                    {`User ${recipient}`}
+                    {`User ${sender}`}
                 </Typography>
                 <Typography variant="h1">
-                    {`User ${reciever}`}
+                    {`User ${receiver}`}
                 </Typography>
-                <Typography variant="h1" sx={{ color: Colors.green }}>
-                    {`${amount} coins`}
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="h1" sx={{ color: Colors.green }}>
+                        {amount}
+                    </Typography>
+                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                </Stack>
             </Stack>
             <Box sx={{ border: `2px dashed black` }}/>
         </>
     );
 };
 
-const getRandomInt = (max) => {
-    return Math.floor(Math.random() * max);
-}
-
 const Transactions = () => {
     const [ listTransactions, setListTransactions ] = useState([]);
+    const { ringQuery } = useContext(UserContext);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-          const newList = [
-                {
-                    recipient: getRandomInt(5),
-                    reciever: getRandomInt(5),
-                    amount: getRandomInt(100)
-                },
-                ...listTransactions
-          ];
-          setListTransactions(newList);
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [listTransactions]);
+        const socket = socketio(ENDPOINT);
+        socket.on("new_transaction", (newTransaction) => {
+            console.log('ring', ringQuery.data);
+            const sender = ringQuery.data.find((item) => item.address === newTransaction["sender_address"]).id;
+            const receiver = ringQuery.data.find((item) => item.address === newTransaction["receiver_address"]).id;
+            console.log('Sender', sender);
+            console.log('Receiver', receiver);
+            const newItem = {
+                sender,
+                receiver,
+                amount: newTransaction.amount
+            };
+            setListTransactions(prev => ([newItem, ...prev]));
+        });
+    }, []);
+
     return (
         <Grid container spacing={2} sx={{ p: 2 }}>
             <Grid item xs={12}>
@@ -61,30 +69,32 @@ const Transactions = () => {
             <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>
-            <Grid item xs={12}>
-                <Stack direction="row" justifyContent="space-around">
-                    <Typography variant="h1">
-                        Recipient
-                    </Typography>
-                    <Typography variant="h1">
-                        Receiver
-                    </Typography>
-                    <Typography variant="h1">
-                        Amount
-                    </Typography>
-                </Stack>
-                <Box sx={{ p: 2, borderRadius: 2, height: 400, background: 'white', border: 5, overflowY: 'scroll' }}>
-                    <Stack spacing={1}>
-                        {listTransactions.map((transaction, key) => 
-                            <Transaction 
-                                key={key}
-                                recipient={transaction?.recipient}
-                                reciever={transaction?.reciever}
-                                amount={transaction?.amount}
-                            />)}
+            <Grow in={true} timeout={1000}>
+                <Grid item xs={12}>
+                    <Stack direction="row" justifyContent="space-around">
+                        <Typography variant="h1">
+                            Sender
+                        </Typography>
+                        <Typography variant="h1">
+                            Receiver
+                        </Typography>
+                        <Typography variant="h1">
+                            Amount
+                        </Typography>
                     </Stack>
-                </Box>
-            </Grid>
+                    <Box sx={{ p: 2, borderRadius: 2, height: 400, background: 'white', border: 5, overflowY: 'scroll' }}>
+                        <Stack spacing={1}>
+                            {listTransactions.map((transaction, key) => 
+                                <Transaction 
+                                    key={key}
+                                    sender={transaction?.sender}
+                                    receiver={transaction?.receiver}
+                                    amount={transaction?.amount}
+                                />)}
+                        </Stack>
+                    </Box>
+                </Grid>
+            </Grow>
             <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>

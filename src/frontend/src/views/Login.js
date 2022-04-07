@@ -7,10 +7,11 @@ import { LoadingButton } from '@mui/lab';
 import { useSnackbar } from 'notistack';
 import { UserContext } from 'context';
 import Grow from '@mui/material/Grow';
+import coin from 'assets/images/coin.png';
 
 const Login = () => {
     const methods = useForm();
-    const { setIp } = useContext(UserContext);
+    const { setIP } = useContext(UserContext);
     const { enqueueSnackbar } = useSnackbar();
     const onSubmit = ({ ip }) => {
         if (ip === undefined || ip === '') {
@@ -20,16 +21,21 @@ const Login = () => {
             });
         } 
         else {
-            setIp(ip);
+            setIP(ip);
         }
     }
     return (
         <Box justifyContent="center" sx={{ display: 'flex', height: '100vh', width: '100%', background: Colors.purpleLight }}>
             <Grid container justifyContent="center" alignItems="center">
-                <Grow in={true} timeout={1000}>
                     <Grid item xs={10} sm={6}>
-                        <Typography variant="h2" sx={{ color: 'white' }}>NOOBCASH.</Typography>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <Typography variant="h3" sx={{ color: 'white' }}>NOOBCASH.</Typography>
+                            <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                            <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                            <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                        </Stack>
                         <FormProvider {...methods}>
+                            <Grow in={true} timeout={1100}>
                             <Stack 
                                 alignItems="center"
                                 direction="row"
@@ -51,17 +57,9 @@ const Login = () => {
                                     </LoadingButton>
                                 </AnimateButton>
                             </Stack>
+                            </Grow>
                         </FormProvider>
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
                     </Grid>
-                </Grow>
             </Grid>
         </Box>
     );

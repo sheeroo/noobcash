@@ -8,7 +8,13 @@ const theme = createTheme({
     fontFamily: font,
     h1: {
       fontWeight: 'bold',
-      fontSize: '1rem'
+      fontSize: '1rem',
+      userSelect: 'none'
+    },
+    h2: {
+      fontWeight: 'bold',
+      fontSize: '1.2rem',
+      userSelect: 'none'
     }
   },
   palette: {
@@ -49,7 +55,7 @@ const theme = createTheme({
             boxShadow: 'none',
             fontWeight: 500,
             padding: 12,
-            borderRadius: '4px'
+            borderRadius: '2px'
           }
       }
     },

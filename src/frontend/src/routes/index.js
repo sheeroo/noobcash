@@ -6,11 +6,12 @@ import { useContext } from 'react';
 import MainRoutes from './MainRoutes';
 import AuthenticationRoutes from './AuthenticationRoutes';
 import { UserContext } from 'context';
-// ==============================|| ROUTING RENDER ||============================== //
+
+// ==============================|| APP ROOT ||============================== //
 
 const Routes = memo(() => {
-    const { ip } = useContext(UserContext);
-    const routes = ip ? MainRoutes() : AuthenticationRoutes();
+    const { myIP } = useContext(UserContext);
+    const routes = myIP ? MainRoutes() : AuthenticationRoutes();
     return useRoutes(routes, '');
 });
 

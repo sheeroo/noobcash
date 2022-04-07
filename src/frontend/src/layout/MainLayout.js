@@ -1,16 +1,31 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { UserContext } from 'context';
-import { Box, Stack, Button, Typography } from '@mui/material';
+import { Box, Stack, Button, Typography, CircularProgress } from '@mui/material';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useWindowDimensions } from 'hooks';
 import Colors from 'assets/colors';
+import coin from 'assets/images/coin.png';
+
+const DisplayBalance = ({ balance, status }) => {
+    return {
+        loading: <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>Loading...</Typography>,
+        success: (
+            <Stack direction="row" spacing={2} alignItems="center">
+                <Typography variant="h2" sx={{ color: 'white', userSelect: 'none' }}>{balance}</Typography>
+                <Box sx={{ width: 30, height: 30, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+            </Stack>
+        ),
+        error: <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>Error :(</Typography>
+    }[status];
+}
 
 const MainLayout = () => {
     const { height } = useWindowDimensions();
-    const { setIp } = useContext(UserContext);
+    const { setIP, balanceQuery } = useContext(UserContext);
     const navigate = useNavigate();
     const headerHeight = 75;
     const footerHeight = 75;
+
     return (
         <Box>
             {/* header */}
@@ -30,13 +45,17 @@ const MainLayout = () => {
                                 Your balance:
                             </Typography>
                             <Stack direction="row" spacing={1} sx={{ p: 1, borderRadius: 1, border: 5, background: Colors.green, cursor: 'pointer' }}>
-                                <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
-                                    {`${125} coins`}
+                                {/* <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
+                                    {balanceQuery?.isLoading ? `- coins` : `${balanceQuery?.data?.balance} coins`}
                                 </Typography>
+                                <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
+                                    {balanceQuery?.isLoading ? `- coins` : `${balanceQuery?.data?.balance} coins`}
+                                </Typography> */}
+                                <DisplayBalance balance={balanceQuery?.data?.balance} status={balanceQuery.status} />
                             </Stack>
                         </Stack>
                         <Button
-                            onClick={() => setIp(null)}
+                            onClick={() => setIP(null)}
                             variant="contained"
                             color="secondary"
                         >
@@ -50,7 +69,31 @@ const MainLayout = () => {
                 <Outlet />
             </Box>
             {/* footer */}
-            <Box sx={{ background: Colors.blue, borderTop: 6, position: 'absolute', left: 0, right: 0, bottom: 0, height: footerHeight }}/>
+            <Box sx={{ background: Colors.blue, borderTop: 6, position: 'absolute', left: 0, right: 0, bottom: 0, height: footerHeight }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2 }}>
+                    <Stack direction="row" spacing={2}>
+                        <Typography variant="h1" sx={{ color: 'white' }}>
+                                    el17838
+                        </Typography>
+                        <Typography variant="h1" sx={{ color: 'white' }}>
+                                    el17083
+                        </Typography>
+                        <Typography variant="h1" sx={{ color: 'white' }}>
+                                    el17140
+                        </Typography>
+                    </Stack>
+                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
+                    <Typography 
+                        onClick={() => window.open("https://github.com/adonistseriotis/noobcash")}
+                        variant="h1"
+                        sx={{ color: 'white', textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                        Github repo
+                    </Typography>
+                </Stack>
+            </Box>
         </Box>
     );
 }

@@ -21,11 +21,11 @@ root.render(
           horizontal: 'center',
         }}
       >
-          <UserProvider>
-            <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <UserProvider queryClient={queryClient}>
               <Routes />
-            </QueryClientProvider>
           </UserProvider>
+        </QueryClientProvider>
       </SnackbarProvider>
     </ThemeProvider>
   </BrowserRouter>

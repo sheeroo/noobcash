@@ -15,10 +15,17 @@ def broadcast(ring, url_action, data, me = None, wait = False):
 		threads=[]
 		responses=[]
 		def call_func(node, url_action, data):
-			log.info(f'Sending data to node {node.ip}:{node.port}{url_action}...')
-			response = requests.post(f'http://{node.ip}:{node.port}{url_action}', json=data, timeout=10)
-			log.info(f'Node {node.ip}:{node.port} responded with {response.text}...')
-			responses.append(response)
+			try:
+				log.info(f'Sending data to node {node.ip}:{node.port}{url_action}...')
+				response = requests.post(f'http://{node.ip}:{node.port}{url_action}', json=data, timeout=100)
+				if len(response.text) < 200:
+					log.info(f'Node {node.ip}:{node.port} responded with {response.text}...')
+				else:
+					log.info(f'Node {node.ip}:{node.port} responded')
+				responses.append(response)
+			except requests.Timeout:
+				log.error(f'Request to node {node.ip}:{node.port}{url_action} failed with timeout...')
+				
 		for node in ring:
 			if me != None and me.ip == node.ip and me.port == node.port:
 				log.warning('PLEASE DONT SEND IT BACK TO ME')

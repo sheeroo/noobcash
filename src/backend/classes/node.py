@@ -76,7 +76,7 @@ class Node:
 			bootstrap_port (Int): Port of bootstrap node	
 		'''
 		try:
-			response = requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/subscribe', 
+			response = requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/bootstrap/subscribe', 
 				json=self.to_dict()
 			)
 			response_data = response.json()
@@ -85,7 +85,7 @@ class Node:
 			log.success(f'Registered node {self.id} to ring.')
 
 			log.info('Giving life signs after successful registration...')
-			requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/healthcheck', 
+			requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/bootstrap/healthcheck', 
 				json=self.to_dict()
 			)
 		except requests.HTTPError as errorh:
@@ -223,6 +223,7 @@ class Node:
 		capacity = int(os.getenv('MAX_CAPACITY'))
 		last_block = self.blockchain.last_block
 		if last_block.contains_transaction(transaction):
+			log.info(f'Transaction {transaction.transaction_id} is already in blockchain')
 			return
 		if len(last_block.transactions) < capacity and last_block.index != 0:
 			last_block.add_transaction(transaction)
@@ -280,10 +281,10 @@ class Node:
 			nodes(list(Blockchain)): Returned data from requested resolve
 		'''
 		self.resolving_conflict = True
-		checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
+		log.info('Resolving conflict...')
+		# checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
 		
-		results = helper.broadcast(self.ring, '/state/get', checkpoint_dict, me=self, wait=True)
-
+		results = helper.broadcast(self.ring, '/state/get',  None, me=self, wait=True)
 
 		max_length = len(self.blockchain.chain)
 		accepted_state = None
@@ -298,8 +299,11 @@ class Node:
 				accepted_state = state
 			
 		if accepted_state:
+			log.info(f"Chose {accepted_state['id']}'s chain with max length {max_length}")
 			self.set_state(accepted_state)
 		# else I have the biggest chain
+		else:
+			log.info('I have the biggest chain hehe')
 		self.resolving_conflict = False
 		
 		return None
@@ -310,6 +314,7 @@ class Node:
 		tx_queue = [t.to_dict() for t in self.tx_queue]
 		ring = [r.to_dict() for r in self.ring]
 		return dict(
+			id=self.id,
 			utxo=utxo,
 			blockchain=self.blockchain.to_dict(),
 			ring=ring,

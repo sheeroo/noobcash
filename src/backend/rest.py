@@ -11,7 +11,6 @@ from classes.block import Block
 from classes.transaction import Transaction
 from exceptions.block import AlreadyReceivedBlockException, InvalidBlockException
 from exceptions.transaction import InsufficientFundsException, InvalidTransactionException
-import copy
 
 # from classes.block import Block
 from classes.node import Node
@@ -27,8 +26,9 @@ CORS(app)
 
 # Process memory 
 node: Node = None
+isLoggedIn = False
 
-bootstrap = Blueprint('bootstrap', __name__)
+bootstrap = Blueprint('bootstrap', __name__, url_prefix='/bootstrap')
 @bootstrap.route('/subscribe', methods=['POST'])
 def subscribe():
     if not node.is_bootstrap:
@@ -200,6 +200,25 @@ def get_balance():
     balance = node.wallet_balance()
     response = { 'balance': balance }
     return jsonify(response), 200
+
+@app.route('/login', methods=['GET'])
+def login():
+    if isLoggedIn:
+        response = { 'error': True, 'message': 'Someone is already logged in' }
+        return jsonify(response), 401
+    else:
+        response = { 'error': False, 'message': f'Welcome back to node {node.id}'}
+        return jsonify(response), 200
+    
+@app.route('/logout', methods=['POST'])
+def logout():
+    if isLoggedIn:
+        isLoggedIn = False
+        response = { 'error': False, 'message': f'Successfully disconnected from node {node.id}'}
+        return jsonify(response), 200
+    else:
+        response = { 'error': True, 'message': 'No one is connected to this node' }
+        return jsonify(response), 400
 
 debug = Blueprint('debug', __name__, url_prefix='/debug')
 @debug.route('/node', methods=['GET'])

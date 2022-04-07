@@ -34,10 +34,10 @@ const Transaction = ({ sender, receiver, amount, time }) => {
                 </Stack>
                 <Stack spacing={1} alignItems="center">
                     <Typography variant="h1" sx={{ fontSize: '1rem' }}>
-                        {time.date}
+                        {time?.date}
                     </Typography>
                     <Typography variant="h1" sx={{ fontSize: '1rem' }}>
-                        {time.hours}
+                        {time?.hours}
                     </Typography>
                 </Stack>
             </Stack>
@@ -47,6 +47,13 @@ const Transaction = ({ sender, receiver, amount, time }) => {
 };
 
 const formatDate = (date) => {
+    if (date === undefined) {
+        return {
+            date: '',
+            hours: ''
+        }
+    }
+    console.log('date', date);
     const hours = (date.getHours() < 10) ? `0${date.getHours()}` : date.getHours();
     const minutes = (date.getMinutes() < 10) ? `0${date.getMinutes()}` : date.getMinutes();
     const day = (date.getDate() < 10) ? `0${date.getDate()}` : date.getDate();
@@ -59,6 +66,7 @@ const formatDate = (date) => {
 }
 
 const format = (data, transaction) => {
+    console.log('data', data);
     if (!data) {
         return {};
     }
@@ -75,13 +83,16 @@ const format = (data, transaction) => {
 
 const Transactions = () => {
     const [ listTransactions, setListTransactions ] = useState([]);
-    const { ringQuery } = useContext(UserContext);
+    const { ringQuery, myIP } = useContext(UserContext);
     const queryClient = useQueryClient();
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 let latestTransactions = await transactionLog();
+                console.log('data', latestTransactions);
                 latestTransactions = latestTransactions.map((trx) => format(ringQuery.data, trx))
+                console.log('data', latestTransactions);
                 setListTransactions(latestTransactions);
             } catch (error) {
                 console.error('error', error);

@@ -59,15 +59,15 @@ export const getRing = async () => {
 
 export const transactionLog = async () => {
     try {
-        const ip = getIP();
+        // const ip = getIP();
         const instance = axios.create({
-            baseURL: `http://${ip}`,
+            baseURL: `http://192.168.0.96:5000`,
             timeout: 5000
         });
         const { data } = await instance.get('/transaction/view');
         return data;
     } catch (error) {
-        console.error('Ring Error', error);
+        console.error('Transction Log Error', error);
         throw error;
     }
 }

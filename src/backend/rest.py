@@ -140,6 +140,11 @@ def create_transaction():
         log.error(e)
         return jsonify(response), 400
 
+@transaction.route('/view', methods=['GET'])
+def view_transactions():
+    last_transactions = node.view_transactions()
+    return jsonify(last_transactions), 200
+
 block = Blueprint('/block', __name__, url_prefix='/block')
 @block.route('/receive', methods=['POST'])
 def receive_block():
@@ -223,6 +228,10 @@ def logout():
         response = { 'error': True, 'message': 'No one is connected to this node' }
         return jsonify(response), 400
 
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    return jsonify(node.view_stats()), 200
+
 debug = Blueprint('debug', __name__, url_prefix='/debug')
 @debug.route('/node', methods=['GET'])
 def print_node():
@@ -238,7 +247,7 @@ def print_finalstate():
     for r in node.ring:
         result.append({
             'node': r.id,
-            'balance': node.wallet_balance(r.public_key)
+            'balance': node.wallet_balance(r.wallet.public_key.decode())
         })
     return jsonify(result), 200
 

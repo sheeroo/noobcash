@@ -25,7 +25,7 @@ def run_simulation(node):
             arguments = line.split(' ')
             receiver = arguments[0][2]
             amount = arguments[1]
-            print(f'({threading.get_ident()}) -> Sending {amount} NBC to node {receiver}')
+            print(f'({threading.get_ident()}) -> Node {node} is sending {amount} NBC to node {receiver}')
             data = dict(
                 receiver=int(receiver),
                 amount=int(amount)

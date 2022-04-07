@@ -4,9 +4,9 @@ from urllib import request, response
 import requests
 from colorama import Fore
 from time import sleep
-from prompt_toolkit import prompt
+from PyInquirer import prompt
 
-IP = '127.0.0.1'
+IP = '0.0.0.0'
 
 def client():
 
@@ -14,9 +14,10 @@ def client():
     
     while True:
         task = [{
+            'type': 'list',
             'name': 'method',
             'message': 'Choose Task',
-            'menu': ['Create Transaction', 'Show Transaction History', 'Show Balance', 'Help', 'Exit'],
+            'choices': ['Create Transaction', 'Show Transaction History', 'Show Balance', 'Help', 'Exit'],
             'filter': lambda val: val.lower()
         }]
 
@@ -68,7 +69,7 @@ def client():
         else:
             print('Type help to see the availialbe options\n')
 
-if __name__ == 'main':     
+if __name__ == '__main__':     
     parser = ArgumentParser(description = 'CLI of noobcash')
     required = parser.add_argument_group('required arguments')
     required.add_argument('-port', type = int, help = 'node port')

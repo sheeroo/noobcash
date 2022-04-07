@@ -50,6 +50,8 @@ class Block:
             log.error(self.previous_hash, '!=', previous_block.current_hash)
             # log.error('PreviousBlock', previous_block)
             raise InvalidBlockException(block=self, message="This block has invalid previous hash")
+        
+        log.success(f'Block {self.index} validated.')
         return True
 
     def contains_transaction(self, transaction):

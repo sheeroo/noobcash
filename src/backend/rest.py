@@ -76,20 +76,18 @@ def receive_transaction():
     while node.resolving_conflict:
         pass
 
-    node.tx_queue_lock.acquire()
-    log.info(f'Acquired first lock ({threading.get_ident()})...')
-    if len(node.tx_queue) == 0 or transaction.timestamp > node.tx_queue[-1].timestamp:
-        # log.info('Appending to transaction queue...')
-        node.tx_queue.append(transaction)
-    else:
-        # Insert at proper position according to timestamp
-        i = 0
-        # log.info('Finding correct position for this transaction...')
-        while transaction.timestamp > node.tx_queue[i].timestamp:
-            i+=1
-        node.tx_queue.insert(i, transaction)
-    
-    node.tx_queue_lock.release()
+    with node.tx_queue_lock:
+        # log.info(f'Acquired first lock ({threading.get_ident()})...')
+        if len(node.tx_queue) == 0 or transaction.timestamp > node.tx_queue[-1].timestamp:
+            # log.info('Appending to transaction queue...')
+            node.tx_queue.append(transaction)
+        else:
+            # Insert at proper position according to timestamp
+            i = 0
+            # log.info('Finding correct position for this transaction...')
+            while transaction.timestamp > node.tx_queue[i].timestamp:
+                i+=1
+            node.tx_queue.insert(i, transaction)
     # log.info(f'Sleeping ({threading.get_ident()})...')
     # Sleep to exploit flask multithreading and locking for other requests capture by threads to insert their transactions
     time.sleep(0.5)

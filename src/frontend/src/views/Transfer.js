@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { UserContext } from 'context';
 import { Stack, Grid, Typography, Button, Grow  } from '@mui/material';
 import Colors from 'assets/colors';
@@ -8,6 +8,9 @@ import { TextInput } from 'components';
 import { newTransaction } from 'apis';
 import { useSnackbar } from 'notistack';
 import { useQueryClient } from 'react-query';
+import useSound from 'use-sound';
+import lostAudio from 'assets/audio/lost.mp3';
+import coinAudio from 'assets/audio/coin.wav';
 
 const FunnyStack = ({ children, sx, ...props }) => (
     <Stack sx={{ p: 2, borderRadius: 2, border: 5, background: 'white', ...sx }} {...props}>
@@ -19,6 +22,10 @@ const FunnyStack = ({ children, sx, ...props }) => (
 const Transfer = () => {
     const methods = useForm();
     const queryClient = useQueryClient();
+    const balanceData = queryClient.getQueryData('balance');
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playLost, playLostData] = useSound(lostAudio);
+    const [playCoin, playCoinData] = useSound(coinAudio);
 
     const { enqueueSnackbar } = useSnackbar();
     const transactionRules = { 
@@ -26,8 +33,10 @@ const Transfer = () => {
         pattern: /^[0-9]+$/
     };
 
+
     const submitTransaction = async ({ receiver, amount }) => {
         try {
+            const balance = balanceData.balance 
             await newTransaction({ receiver: parseInt(receiver), amount: parseInt(amount) });
             queryClient.invalidateQueries('balance');
             enqueueSnackbar("Your transaction was submitted", {
@@ -36,12 +45,19 @@ const Transfer = () => {
             methods.reset({
                 receiver: "",
                 amount: ""
-            })
+            });
+
+            if (parseInt(amount) === balance) {
+                setIsPlaying(true);
+                playLost();
+            } else {
+                playCoin();
+            }
         } catch (error) {
             enqueueSnackbar(error?.data?.message || "Something went wrong :(", {
                 variant: "error"
             })
-            console.error(error?.data.message);
+            console.error(error);
         }
     }
 
@@ -69,6 +85,13 @@ const Transfer = () => {
                                 >
                                     Go!
                                 </Button>
+                                {isPlaying && <Button
+                                    variant="contained"
+                                    color='secondary'
+                                    onClick={() => { playLostData.stop(); setIsPlaying(false); }}
+                                >
+                                    STOP
+                                </Button>}
                         </FunnyStack>
                     </FormProvider>
                 </Grid>

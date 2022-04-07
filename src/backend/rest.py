@@ -73,7 +73,7 @@ def receive_transaction():
     transaction = Transaction.from_dict(transaction_dict)
     log.info(f'Receiving transaction {transaction.transaction_id}...')
 
-    while node.resolving_conflict:
+    while node.resolving_conflict or node.is_receiving_block:
         pass
 
     with node.tx_queue_lock:
@@ -116,6 +116,10 @@ def create_transaction():
     receiver_id = data['receiver']
     amount = data['amount']
     receiver = None
+
+    while node.resolving_conflict or node.is_receiving_block:
+        pass
+    
     try:
         for r in node.ring:
             if r.id == receiver_id:
@@ -157,36 +161,51 @@ def receive_block():
     # Check if block's transactions are already received in another block
     block_transactions = [t.transaction_id for t in block.transactions]
     try:
+        node.is_receiving_block = True
         with node.tx_log_lock:
         # If same transactions are already received
             for t in block_transactions:
                 if t in node.tx_log[::-1]:
                     raise AlreadyReceivedBlockException(block, message='Block transactions already in log')
             
-            node.tx_log.extend(block_transactions)
             # Wait while concensus is running
+            start = time.time()
+            index = 0
             while node.resolving_conflict:
+                now = time.time()
+                if (now - start)%20 == 0:
+                    index +=1
+                    log.info(f'I am still resolving conflict... {index*20}sec')
                 pass
+            log.info('Concensus is not running...')
 
             with node.blockchain_lock:
                 last_block = node.blockchain.last_block
-                if block.index in [b.index for b in node.blockchain.chain]:
-                    raise AlreadyReceivedBlockException(block, message='Block index already in chain')
+            #     if block.index in [b.index for b in node.blockchain.chain]:
+            #         raise AlreadyReceivedBlockException(block, message='Block index already in chain')
+            
+            node.tx_log.extend(block_transactions)
             
         # Here only if block is not already broadcasted from another minder
         block.validate_block(last_block)
         node.blockchain.chain.append(block)
+        log.success(f'Block {block.index} successfully added to chain')
+        node.is_receiving_block = False
         response = { 'error': False, 'message': 'Block accepted' }
         return jsonify(response), 200
     except AlreadyReceivedBlockException as e:
+        node.is_receiving_block = False
         response = { 'error': True, 'message': e.message }
         return jsonify(response), 200
     except InvalidBlockException as ie:
+        node.is_receiving_block = False
         # If block is invalid then resolve conflict
         if ie.message == "This block has invalid previous hash":
             node.resolve_conflict()
         response = { 'error': True, 'message': ie.message }
         return jsonify(response), 200
+    finally:
+        node.is_receiving_block = False
 
 ring = Blueprint('/ring', __name__, url_prefix='/ring')
 @ring.route('/receive', methods=['POST'])

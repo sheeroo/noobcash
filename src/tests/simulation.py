@@ -10,7 +10,7 @@ load_dotenv()  # take environment variables from .env
 nodes = int(os.getenv('NODES'))
 bootstrap_ip = os.getenv('BOOTSTRAP_IP')
 bootstrap_port = int(os.getenv('BOOTSTRAP_PORT'))
-result = requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/state/get', json=None)
+result = requests.post(f'http://{bootstrap_ip}:{bootstrap_port}/state/get', json=None, timeout=90)
 ring = result.json()['ring']
 # print('RING', ring)
 
@@ -21,11 +21,11 @@ def run_simulation(node):
     print('IP:', ip)
     print('PORT:', port)
     with open(f'{path}/transactions{node}.txt','r',encoding = 'utf-8') as f:
-        for line in f:
+        for i, line in enumerate(f):
             arguments = line.split(' ')
             receiver = arguments[0][2]
             amount = arguments[1]
-            print(f'({threading.get_ident()}) -> Node {node} is sending {amount} NBC to node {receiver}')
+            print(f'({threading.get_ident()}) -> transactions{node}.txt:{i} Node {node} is sending {amount} NBC to node {receiver}')
             data = dict(
                 receiver=int(receiver),
                 amount=int(amount)

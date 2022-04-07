@@ -35,7 +35,7 @@ class Blockchain:
         )
         
         #add block to blockchain
-        self.chain.append(block)
+        # self.chain.append(block)
 
         return block
     
@@ -62,6 +62,7 @@ class Blockchain:
         Returns:
             Block: last block of chain
         '''
+        # log.error('CHAIN', self.chain)
         return self.chain[-1]
 
     def resolve(self, dictionary: dict):

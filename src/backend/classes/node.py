@@ -32,6 +32,7 @@ class Node:
 		self.mining = False
 		self.resolving_conflict = False
 		self.socket = None
+		self.is_receiving_block = False
 
 	def view_transactions(self):
 		return [t.to_dict() for t in self.blockchain.last_block.transactions]
@@ -91,6 +92,9 @@ class Node:
 
         # First utxo of node
 		self.utxo = [transaction_outputs]
+
+		# Add block to chain
+		self.blockchain.chain.append(genesis_block)
 
 	def subscribe(self, bootstrap_ip, bootstrap_port):
 		'''Calls bootstrap node to request id and give life signs
@@ -193,6 +197,9 @@ class Node:
 			# Add transaction outputs
 			self.utxo.extend(transaction_outputs)
 
+			if self.socket:
+				self.socket.emit('new_transaction', transaction.to_dict(), broadcast=True)
+
 			return True
 		except InvalidTransactionException as e:
 			raise e
@@ -235,8 +242,6 @@ class Node:
 
 			self.add_transaction_to_block(transaction)
 			
-			if self.socket:
-				self.socket.emit('new_transaction', transaction.to_dict(), broadcast=True)
 			return transaction
 		except InvalidTransactionException:
 			raise
@@ -264,28 +269,34 @@ class Node:
 			transaction (Transaction): The new transaction
 		'''
 		log.info('Mining...')
-		self.mining = True # Re initialize cancel mining to False to allow mining
-		nonce = 0
-		new_block = None 
-		while True: 
-			if not self.mining:
-				log.info('Received block. Stopping...')
-				return
-			new_block = Block(
-				index=previous_block.index + 1,
-				previous_hash=previous_block.current_hash,
-				nonce=nonce,
-				curr_transactions=[transaction]
-			)
-			if Node.valid_proof(new_block.current_hash):
-				log.info('Mined!')
-				# Add it to chain
-				self.blockchain.chain.append(new_block)
-				#Broadcast the block
-				self.broadcast_block(new_block)
-				break
-			nonce += 1
-		self.mining = False
+		if self.mining:
+			return
+		try:
+			self.mining = True # Re initialize cancel mining to False to allow mining
+			nonce = 0
+			new_block = None 
+			while True: 
+				if not self.mining:
+					log.info('Received block. Stopping...')
+					break
+				new_block = Block(
+					index=previous_block.index + 1,
+					previous_hash=previous_block.current_hash,
+					nonce=nonce,
+					curr_transactions=[transaction]
+				)
+				if Node.valid_proof(new_block.current_hash):
+					log.info('Mined!')
+					# Add it to chain
+					self.blockchain.chain.append(new_block)
+					#Broadcast the block
+					self.broadcast_block(new_block)
+					break
+				nonce += 1
+		except Exception:
+			raise
+		finally:
+			self.mining = False
 
 	@staticmethod
 	def valid_proof(block_hash):
@@ -306,33 +317,42 @@ class Node:
 		Args:
 			nodes(list(Blockchain)): Returned data from requested resolve
 		'''
-		self.resolving_conflict = True
-		log.info('Resolving conflict...')
-		# checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
-		
-		results = helper.broadcast(self.ring, '/state/get',  None, me=self, wait=True)
-
-		max_length = len(self.blockchain.chain)
-		accepted_state = None
-
-		for result in results:
-			state = result.json()
-			blockchain = Blockchain.from_dict(state['blockchain'])
-			chain_length = len(blockchain.chain)
-
-			if chain_length > max_length:
-				max_length = chain_length
-				accepted_state = state
+		try:
+			self.resolving_conflict = True
+			log.info('Resolving conflict...')
+			# checkpoint_dict = { 'checkpoint': self.blockchain.checkpoint }
 			
-		if accepted_state:
-			log.info(f"Chose {accepted_state['id']}'s chain with max length {max_length}")
-			self.set_state(accepted_state)
-		# else I have the biggest chain
-		else:
-			log.info('I have the biggest chain hehe')
-		self.resolving_conflict = False
-		
-		return None
+			max_length = len(self.blockchain.chain)
+			results = helper.broadcast(self.ring, '/state/get', None, me=self, wait=True)
+
+			accepted_state = None
+
+			for result in results:
+				state = result.json()
+				blockchain = Blockchain.from_dict(state['blockchain'])
+				chain_length = len(blockchain.chain)
+
+				if chain_length > max_length:
+					max_length = chain_length
+					accepted_state = state
+				
+			if accepted_state:
+				log.info(f"Chose {accepted_state['id']}'s chain with max length {max_length}")
+				self.set_state(accepted_state)
+			# else I have the biggest chain
+			else:
+				log.info('I have the biggest chain hehe')
+			
+			log.success('Resolved conflict...')
+			self.resolving_conflict = False
+			return None
+		except Exception:
+			log.error('Something error occured in conflict resolution')
+			self.resolving_conflict = False
+			raise
+		finally:
+			log.info('Setting resolving_onflict to false...')
+			self.resolving_conflict = False
 
 	@property
 	def state(self) -> dict:

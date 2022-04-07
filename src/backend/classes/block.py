@@ -42,14 +42,18 @@ class Block:
         Returns:
             Boolean: False if block is not valid
         '''
-        # Check if current_hash is correct
-        if self.current_hash != self.my_hash():
-            raise InvalidBlockException(block=self, message="This block has invalid hash")
-        # Check if previous_hash is equal to previous block's hash
-        elif self.previous_hash != previous_block.current_hash:
-            log.error(self.previous_hash, '!=', previous_block.current_hash)
-            # log.error('PreviousBlock', previous_block)
-            raise InvalidBlockException(block=self, message="This block has invalid previous hash")
+        log.info('Validating block...')
+        # log.error(self)
+        # log.error(previous_block)
+        if self.index != 0:
+            # Check if current_hash is correct
+            if self.current_hash != self.my_hash():
+                raise InvalidBlockException(block=self, message="This block has invalid hash")
+            # Check if previous_hash is equal to previous block's hash
+            elif self.previous_hash != previous_block.current_hash:
+                log.error(self.previous_hash, '!=', previous_block.current_hash)
+                # log.error('PreviousBlock', previous_block)
+                raise InvalidBlockException(block=self, message="This block has invalid previous hash")
         
         log.success(f'Block {self.index} validated.')
         return True
@@ -85,11 +89,11 @@ class Block:
     def __str__(self):
         return json.dumps(self.to_dict(), indent=4)
 
-    def __repr__(self):
-        transactions_str = ''
-        for i, t in enumerate(self.transactions):
-            transactions_str += '\t' + i + '. ' + t.__repr__
-        return  'Index: ' + self.index + '\n' \
-            +   'Timestamp: ' + self.timestamp + '\n' \
-            +   'Hash: ' + self.hash + '\n' \
-            +   'Transactions: \n' + transactions_str
+    # def __repr__(self):
+    #     transactions_str = ''
+    #     for i, t in enumerate(self.transactions):
+    #         transactions_str += '\t' + i + '. ' + t.__repr__
+    #     return  'Index: ' + self.index + '\n' \
+    #         +   'Timestamp: ' + self.timestamp + '\n' \
+    #         +   'Hash: ' + self.hash + '\n' \
+    #         +   'Transactions: \n' + transactions_str

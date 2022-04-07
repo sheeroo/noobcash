@@ -14,7 +14,7 @@ const MainLayout = Loadable(lazy(() => import('layout/MainLayout')));
 
 const MainRoutes = () => ([
     {
-        path: '',
+        path: '*',
         element: <MainLayout />,
         children: [
             {

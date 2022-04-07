@@ -7,6 +7,7 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { TextInput } from 'components';
 import { newTransaction } from 'apis';
 import { useSnackbar } from 'notistack';
+import { useQueryClient } from 'react-query';
 
 const FunnyStack = ({ children, sx, ...props }) => (
     <Stack sx={{ p: 2, borderRadius: 2, border: 5, background: 'white', ...sx }} {...props}>
@@ -17,6 +18,8 @@ const FunnyStack = ({ children, sx, ...props }) => (
 
 const Transfer = () => {
     const methods = useForm();
+    const queryClient = useQueryClient();
+
     const { enqueueSnackbar } = useSnackbar();
     const transactionRules = { 
         required: true,
@@ -25,12 +28,20 @@ const Transfer = () => {
 
     const submitTransaction = async ({ receiver, amount }) => {
         try {
-            await newTransaction({ receiver, amount });
+            await newTransaction({ receiver: parseInt(receiver), amount: parseInt(amount) });
+            queryClient.invalidateQueries('balance');
             enqueueSnackbar("Your transaction was submitted", {
                 variant: "success"
             })
+            methods.reset({
+                receiver: "",
+                amount: ""
+            })
         } catch (error) {
-            console.error(error);
+            enqueueSnackbar(error?.data?.message || "Something went wrong :(", {
+                variant: "error"
+            })
+            console.error(error?.data.message);
         }
     }
 

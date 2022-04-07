@@ -33,6 +33,28 @@ class Node:
 		self.resolving_conflict = False
 		self.socket = None
 
+	def view_transactions(self):
+		return [t.to_dict() for t in self.blockchain.last_block.transactions]
+
+	def view_stats(self):
+		first_block = self.blockchain.chain[0]
+		last_block = self.blockchain.last_block
+
+		block_time = (last_block.timestamp - first_block.timestamp) / len(self.blockchain.chain)
+
+		capacity = int(os.getenv('MAX_CAPACITY'))
+
+		first_transaction_time = first_block.transactions[0].timestamp
+		last_transaction_time = last_block.transactions[-1].timestamp
+		all_transactions = (len(self.blockchain.chain) - 1) * capacity + len(last_block.transactions)
+
+		transaction_throughput = (last_transaction_time - first_transaction_time) / all_transactions
+
+		return {
+			'block_time': block_time,
+			'throughput': transaction_throughput
+		}
+
 	@property
 	def is_bootstrap(self):
 		return self.id == 0

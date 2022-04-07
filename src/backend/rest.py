@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env
 
 app = Flask(__name__)
-socketio = SocketIO(app, engineio_logger=True, logger=True, cors_allowed_origins="*", path='/socket.io')
+socketio = SocketIO(app, logger=True, cors_allowed_origins="*", path='/socket.io')
 CORS(app)
 
 
@@ -301,8 +301,10 @@ if __name__ == '__main__':
             else:
                 # Try to subscribe to bootstrap node
                 node.subscribe(bootstrap_ip=bootstrap_ip, bootstrap_port=bootstrap_port)
+            
+            node.socket = socketio
     
     thread=threading.Thread(target=init, args=(ip, port, bootstrap_ip, bootstrap_port))
     thread.start()
     # app.run(host='127.0.0.1', port=port, threaded=True)
-    socketio.run(app, host='127.0.0.1', port=port)
+    socketio.run(app, host=ip, port=port)

@@ -19,9 +19,9 @@ const Home = () => {
 
     useEffect(() => {
         const socket = socketio(ENDPOINT);
-        socket.on("hello", data => {
+        socket.on("new_transaction", data => {
             console.log('DATA', data);
-            alert('hello');
+            alert('Received a new transaction');
         });
       }, []);
 

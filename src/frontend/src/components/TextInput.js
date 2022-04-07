@@ -8,7 +8,7 @@ import { useFormContext } from 'react-hook-form';
 import PropTypes from 'prop-types';
 
 const TextInput = (props) => {
-    const { register, formState, control } = useFormContext();
+    const { register, formState } = useFormContext();
     const { errors } = formState;
     const { name, rules, label, defaultValue, ...other } = props;
 

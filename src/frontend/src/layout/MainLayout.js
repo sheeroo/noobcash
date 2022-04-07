@@ -25,6 +25,16 @@ const MainLayout = () => {
                                 NOOBCASH
                             </Typography>
                         </Box>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="end">
+                            <Typography variant="h1" sx={{ color: 'white' }}>
+                                Your balance:
+                            </Typography>
+                            <Stack direction="row" spacing={1} sx={{ p: 1, borderRadius: 1, border: 5, background: Colors.green, cursor: 'pointer' }}>
+                                <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
+                                    {`${125} coins`}
+                                </Typography>
+                            </Stack>
+                        </Stack>
                         <Button
                             onClick={() => setIp(null)}
                             variant="contained"

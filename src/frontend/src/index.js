@@ -1,17 +1,32 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { createRoot } from 'react-dom/client';
 import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { BrowserRouter } from "react-router-dom";
+import Routes from 'routes';
+import { SnackbarProvider } from 'notistack';
+import { UserProvider } from 'context';
+import theme from 'themes';
+import { QueryClient, QueryClientProvider } from 'react-query'
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
+const queryClient = new QueryClient();
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(
+  <BrowserRouter>
+    <ThemeProvider theme={theme}>
+      <SnackbarProvider 
+        maxSnack={1}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+      >
+          <UserProvider>
+            <QueryClientProvider client={queryClient}>
+              <Routes />
+            </QueryClientProvider>
+          </UserProvider>
+      </SnackbarProvider>
+    </ThemeProvider>
+  </BrowserRouter>
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

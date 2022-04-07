@@ -31,6 +31,7 @@ class Node:
 		self.tx_log_lock = threading.Lock()
 		self.mining = False
 		self.resolving_conflict = False
+		self.socket = None
 
 	@property
 	def is_bootstrap(self):
@@ -211,6 +212,9 @@ class Node:
 			self.broadcast_transaction(transaction)
 
 			self.add_transaction_to_block(transaction)
+			
+			if self.socket:
+				self.socket.emit('new_transaction', transaction.to_dict(), broadcast=True)
 			return transaction
 		except InvalidTransactionException:
 			raise

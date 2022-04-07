@@ -15,5 +15,4 @@ class InvalidBlockchainException(BlockchainException):
         self.message = message
         self.block = block
         super().__init__(blockchain=blockchain, message=self.message)
-        log.warning('\nThis block is the culprit: ', block.__str__())
     

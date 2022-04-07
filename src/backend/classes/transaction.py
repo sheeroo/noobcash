@@ -57,11 +57,10 @@ class Transaction:
     def verify_signature(self):
         '''Verification of a received transaction
 		'''
-        log.error(type(self.sender_address))
         key = RSA.importKey(self.sender_address)
         util = SHA256.new(self.trans_uuid)
         if PKCS1_v1_5.new(key).verify(util, self.signature):
-            log.success('Transaction verified: ' + self.__str__())
+            log.success('Transaction verified: ' + self.transaction_id)
             return True
         else:
             raise InvalidTransactionException(transaction=self, message='Error in transaction verification')
@@ -82,7 +81,7 @@ class Transaction:
         sender_utxo = Utxo(
             previous_trans_id=self.transaction_id,
             amount=total - self.amount, #RESTA
-            recipient=self.sender_address
+            recipient=self.sender_address.decode()
         )
         transaction_outputs = [receiver_utxo, sender_utxo]
         self.transaction_outputs = transaction_outputs

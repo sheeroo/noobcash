@@ -6,7 +6,7 @@ class TransactionException(NbcException):
         self.message = message
         self.transaction = transaction
         log.error(self.__class__, ' -> ', message)
-        log.warning(self.transaction.__str__())
+        log.warning(self.transaction.transaction_id)
         super().__init__(self.message)
 
 class InvalidTransactionException(TransactionException):

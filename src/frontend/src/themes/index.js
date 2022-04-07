@@ -9,19 +9,11 @@ const theme = createTheme({
     h1: {
       fontWeight: 'bold',
       fontSize: '1rem',
-      letterSpacing: '0.3rem',
       userSelect: 'none'
     },
     h2: {
-      letterSpacing: '0.5rem',
       fontWeight: 'bold',
       fontSize: '1.2rem',
-      userSelect: 'none'
-    },
-    h3: {
-      letterSpacing: '1rem',
-      fontWeight: 'bold',
-      fontSize: '2.2rem',
       userSelect: 'none'
     }
   },

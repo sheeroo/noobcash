@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { UserContext } from 'context';
-import { Stack, Grid, Typography, Button  } from '@mui/material';
+import { Stack, Grid, Typography, Button, Grow  } from '@mui/material';
 import Colors from 'assets/colors';
 import { Box } from '@mui/material';
 import { FormProvider, useForm } from 'react-hook-form';
@@ -46,20 +46,22 @@ const Transfer = () => {
             <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>
-            <Grid item xs={12}>
-                <FormProvider {...methods}>
-                    <FunnyStack direction="row" spacing={1} alignItems="center">
-                            <TextInput id="receiver" name="receiver" rules={transactionRules} placeholder="Receiver" />
-                            <TextInput id="amount" name="amount" rules={transactionRules}placeholder="amount" />
-                            <Button
-                                variant="contained"
-                                onClick={methods.handleSubmit(submitTransaction)}
-                            >
-                                Go!
-                            </Button>
-                    </FunnyStack>
-                </FormProvider>
-            </Grid>
+            <Grow in={true} timeout={1200}>
+                <Grid item xs={12}>
+                    <FormProvider {...methods}>
+                        <FunnyStack direction="row" spacing={1} alignItems="center">
+                                <TextInput id="receiver" name="receiver" rules={transactionRules} placeholder="Receiver" />
+                                <TextInput id="amount" name="amount" rules={transactionRules}placeholder="amount" />
+                                <Button
+                                    variant="contained"
+                                    onClick={methods.handleSubmit(submitTransaction)}
+                                >
+                                    Go!
+                                </Button>
+                        </FunnyStack>
+                    </FormProvider>
+                </Grid>
+            </Grow>
         </Grid>
     );
 }

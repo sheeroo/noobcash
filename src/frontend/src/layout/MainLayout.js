@@ -5,6 +5,8 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useWindowDimensions } from 'hooks';
 import Colors from 'assets/colors';
 import coin from 'assets/images/coin.png';
+import Grow from '@mui/material/Grow';
+import gitLogo from 'assets/images/gitLogo.png';
 
 const DisplayBalance = ({ balance, status }) => {
     return {
@@ -36,8 +38,8 @@ const MainLayout = () => {
                             onClick={() => navigate("/home")}
                             sx={{ cursor: 'pointer' }}
                         >
-                            <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
-                                NOOBCASH
+                            <Typography variant="h2" sx={{ color: 'white', userSelect: 'none' }}>
+                                NOOBCASH.
                             </Typography>
                         </Box>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="end">
@@ -71,27 +73,36 @@ const MainLayout = () => {
             {/* footer */}
             <Box sx={{ background: Colors.blue, borderTop: 6, position: 'absolute', left: 0, right: 0, bottom: 0, height: footerHeight }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 2 }}>
-                    <Stack direction="row" spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
                         <Typography variant="h1" sx={{ color: 'white' }}>
                                     el17838
                         </Typography>
+                        <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
                         <Typography variant="h1" sx={{ color: 'white' }}>
                                     el17083
                         </Typography>
+                        <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
                         <Typography variant="h1" sx={{ color: 'white' }}>
                                     el17140
                         </Typography>
+                        <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
                     </Stack>
-                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
-                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
-                    <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
-                    <Typography 
+                    <Stack 
+                        direction="row"
+                        alignItems="center"
+                        spacing={1}
+                        sx={{ cursor: 'pointer' }}
                         onClick={() => window.open("https://github.com/adonistseriotis/noobcash")}
-                        variant="h1"
-                        sx={{ color: 'white', textDecoration: 'underline', cursor: 'pointer' }}
                     >
-                        Github repo
-                    </Typography>
+                        <Box sx={{ width: 30, height: 30, backgroundImage: `url(${gitLogo})`, backgroundSize: 'cover' }}/>
+                        <Typography 
+                            variant="h1"
+                            sx={{ color: 'white', textDecoration: 'underline'}}
+                        >
+                            Github repo
+                        </Typography>
+                    </Stack>
+                    
                 </Stack>
             </Box>
         </Box>

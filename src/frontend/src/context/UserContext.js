@@ -21,7 +21,6 @@ const UserProvider = memo(({ children }) => {
     }, [ringQuery.status])
 
     useEffect(() => {
-        console.log("iam here");
         // user set ip to null, we need to dispatch remove because
         // it will be set as "null"
         if (myIP === null) {

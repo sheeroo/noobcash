@@ -27,7 +27,6 @@ const Login = () => {
     return (
         <Box justifyContent="center" sx={{ display: 'flex', height: '100vh', width: '100%', background: Colors.purpleLight }}>
             <Grid container justifyContent="center" alignItems="center">
-                <Grow in={true} timeout={1000}>
                     <Grid item xs={10} sm={6}>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Typography variant="h3" sx={{ color: 'white' }}>NOOBCASH.</Typography>
@@ -36,6 +35,7 @@ const Login = () => {
                             <Box sx={{ width: 35, height: 35, backgroundImage: `url(${coin})`, backgroundSize: 'cover' }}/>
                         </Stack>
                         <FormProvider {...methods}>
+                            <Grow in={true} timeout={1100}>
                             <Stack 
                                 alignItems="center"
                                 direction="row"
@@ -57,17 +57,9 @@ const Login = () => {
                                     </LoadingButton>
                                 </AnimateButton>
                             </Stack>
+                            </Grow>
                         </FormProvider>
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
                     </Grid>
-                </Grow>
             </Grid>
         </Box>
     );

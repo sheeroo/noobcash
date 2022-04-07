@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext } from 'react';
 import { UserContext } from 'context';
-import { Stack, Grid, Typography,  } from '@mui/material';
+import { Stack, Grid, Typography, Grow  } from '@mui/material';
 import Colors from 'assets/colors';
 import { Box } from '@mui/material';
 import socketio from 'socket.io-client';
@@ -69,30 +69,32 @@ const Transactions = () => {
             <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>
-            <Grid item xs={12}>
-                <Stack direction="row" justifyContent="space-around">
-                    <Typography variant="h1">
-                        Sender
-                    </Typography>
-                    <Typography variant="h1">
-                        Receiver
-                    </Typography>
-                    <Typography variant="h1">
-                        Amount
-                    </Typography>
-                </Stack>
-                <Box sx={{ p: 2, borderRadius: 2, height: 400, background: 'white', border: 5, overflowY: 'scroll' }}>
-                    <Stack spacing={1}>
-                        {listTransactions.map((transaction, key) => 
-                            <Transaction 
-                                key={key}
-                                sender={transaction?.sender}
-                                receiver={transaction?.receiver}
-                                amount={transaction?.amount}
-                            />)}
+            <Grow in={true} timeout={1000}>
+                <Grid item xs={12}>
+                    <Stack direction="row" justifyContent="space-around">
+                        <Typography variant="h1">
+                            Sender
+                        </Typography>
+                        <Typography variant="h1">
+                            Receiver
+                        </Typography>
+                        <Typography variant="h1">
+                            Amount
+                        </Typography>
                     </Stack>
-                </Box>
-            </Grid>
+                    <Box sx={{ p: 2, borderRadius: 2, height: 400, background: 'white', border: 5, overflowY: 'scroll' }}>
+                        <Stack spacing={1}>
+                            {listTransactions.map((transaction, key) => 
+                                <Transaction 
+                                    key={key}
+                                    sender={transaction?.sender}
+                                    receiver={transaction?.receiver}
+                                    amount={transaction?.amount}
+                                />)}
+                        </Stack>
+                    </Box>
+                </Grid>
+            </Grow>
             <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>

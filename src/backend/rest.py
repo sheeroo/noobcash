@@ -1,4 +1,5 @@
-from crypt import methods
+from socket import socket
+from flask_socketio import SocketIO, emit
 from email import message
 import os
 import threading
@@ -22,7 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env
 
 app = Flask(__name__)
+socketio = SocketIO(app, engineio_logger=True, logger=True, cors_allowed_origins="*", path='/socket.io')
 CORS(app)
+
 
 # Process memory 
 node: Node = None
@@ -229,11 +232,38 @@ def print_node():
 def print_blockchain():
     return jsonify(node.blockchain.to_dict()), 200
 
+@debug.route('/finalstate', methods=['GET'])
+def print_finalstate():
+    result = []
+    for r in node.ring:
+        result.append({
+            'node': r.id,
+            'balance': node.wallet_balance(r.public_key)
+        })
+    return jsonify(result), 200
+
+@debug.route('/sendhello', methods=['GET'])
+def send_hello():
+    socketio.emit('hello', {'sheeesh': 'Hellooo'}, broadcast=True)
+    return jsonify({'ok': True}), 200
+
 app.register_blueprint(bootstrap)
 app.register_blueprint(transaction)
 app.register_blueprint(ring)
 app.register_blueprint(block)
 app.register_blueprint(debug)
+
+@socketio.on('hello')
+def print_hello():
+    log.success('HELLOOO')
+
+# @socketio.on('connect')
+# def test_connect(auth):
+#     emit('my response', {'data': 'Connected'})
+    
+@socketio.on_error()
+def error_handler(e):
+    print('An error has occurred: ' + str(e))
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -266,12 +296,13 @@ if __name__ == '__main__':
                 node_copy.id = node.id
                 node.ring.append(node_copy)
                 log.info('You are the bootstrap node')
-                log.info(node)
-                log.info(node.blockchain.last_block.__str__(), header='Genesis block')
+                # log.info(node)
+                # log.info(node.blockchain.last_block.__str__(), header='Genesis block')
             else:
                 # Try to subscribe to bootstrap node
                 node.subscribe(bootstrap_ip=bootstrap_ip, bootstrap_port=bootstrap_port)
     
     thread=threading.Thread(target=init, args=(ip, port, bootstrap_ip, bootstrap_port))
     thread.start()
-    app.run(host='127.0.0.1', port=port, threaded=True)
+    # app.run(host='127.0.0.1', port=port, threaded=True)
+    socketio.run(app, host='127.0.0.1', port=port)

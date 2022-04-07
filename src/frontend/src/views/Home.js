@@ -1,9 +1,11 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { Stack, Grid, Typography  } from '@mui/material';
 import { UserContext } from 'context';
 import Colors from 'assets/colors';
 import { Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import socketio from 'socket.io-client';
+const ENDPOINT = 'http://localhost:5000'
 
 const FunnyStack = ({ children, sx, ...props }) => (
     <Stack sx={{ p: 2, borderRadius: 2, border: 5, background: 'white', ...sx }} {...props}>
@@ -14,6 +16,14 @@ const FunnyStack = ({ children, sx, ...props }) => (
 const Home = () => {
     const { ip } = useContext(UserContext);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const socket = socketio(ENDPOINT);
+        socket.on("hello", data => {
+            console.log('DATA', data);
+            alert('hello');
+        });
+      }, []);
 
     return (
         <Grid container spacing={2} sx={{ p: 2 }}>

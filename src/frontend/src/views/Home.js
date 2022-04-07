@@ -28,18 +28,6 @@ const Home = () => {
     return (
         <Grid container spacing={2} sx={{ p: 2 }}>
             <Grid item xs={12}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="end">
-                    <Typography variant="h1">
-                        Your balance:
-                    </Typography>
-                    <FunnyStack direction="row" spacing={1} sx={{ background: Colors.green, cursor: 'pointer' }}>
-                        <Typography variant="h1" sx={{ color: 'white', userSelect: 'none' }}>
-                            {`${125} coins`}
-                        </Typography>
-                    </FunnyStack>
-                </Stack>
-            </Grid>
-            <Grid item xs={12}>
                 <Box sx={{ border: '4px dashed white' }}/>
             </Grid>
             <Grid item xs={6}> 

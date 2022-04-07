@@ -6,7 +6,9 @@ import Routes from 'routes';
 import { SnackbarProvider } from 'notistack';
 import { UserProvider } from 'context';
 import theme from 'themes';
+import { QueryClient, QueryClientProvider } from 'react-query'
 
+const queryClient = new QueryClient();
 const container = document.getElementById('root');
 const root = createRoot(container);
 root.render(
@@ -20,7 +22,9 @@ root.render(
         }}
       >
           <UserProvider>
-            <Routes />
+            <QueryClientProvider client={queryClient}>
+              <Routes />
+            </QueryClientProvider>
           </UserProvider>
       </SnackbarProvider>
     </ThemeProvider>

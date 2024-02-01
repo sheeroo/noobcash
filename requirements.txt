@@ -14,7 +14,7 @@ Jinja2==3.1.1
 MarkupSafe==2.1.1
 Naked==0.1.31
 prompt-toolkit==1.0.14
-pycryptodome==3.14.1
+pycryptodome==3.19.1
 Pygments==2.11.2
 PyInquirer==1.0.3
 python-dotenv==0.20.0

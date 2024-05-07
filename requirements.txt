@@ -10,7 +10,7 @@ h11==0.13.0
 idna==3.3
 importlib-metadata==4.11.3
 itsdangerous==2.1.2
-Jinja2==3.1.1
+Jinja2==3.1.4
 MarkupSafe==2.1.1
 Naked==0.1.31
 prompt-toolkit==1.0.14

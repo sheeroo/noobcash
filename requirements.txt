@@ -28,6 +28,6 @@ simple-websocket==0.5.1
 six==1.16.0
 urllib3==1.26.9
 wcwidth==0.2.5
-Werkzeug==2.1.0
+Werkzeug==3.0.6
 wsproto==1.1.0
 zipp==3.7.0
